@@ -1,1 +1,1 @@
-# Dukaan-khata
+# Dukaan-khati
