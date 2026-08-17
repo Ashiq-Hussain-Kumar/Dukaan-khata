@@ -5,14 +5,15 @@ import Customer from "./CustomerDetail";
 import { Link } from "react-router-dom";
 import currency from "../Utils/Currency";
 import EmptyState from "../components/Emptystate";
+import { focusField } from "../Utils/focusField";
 
 function Customers() {
 
   const { Customers, setCustomers } = useDataContext();
 
   const cNameRef = useRef(null);
-   const cPhoneRef = useRef(null);
-   const cAddressRef = useRef(null);
+  const cPhoneRef = useRef(null);
+  const cAddressRef = useRef(null);
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -21,66 +22,54 @@ function Customers() {
   const [query, setQuery] = useState("");
 
 
- const filtered = useMemo(
-  () =>
-    Customers.filter(
-      (c) =>
-        c?.name?.toLowerCase()?.includes(query.toLowerCase()) ||
-        c?.phone?.toString().includes(query)
-    ),
-  [Customers, query]
-);
+  const filtered = useMemo(
+    () =>
+      Customers.filter(
+        (c) =>
+          c?.name?.toLowerCase()?.includes(query.toLowerCase()) ||
+          c?.phone?.toString().includes(query)
+      ),
+    [Customers, query]
+  );
 
-  function handleAddCustomer(e) {
-    e.preventDefault();
-    const noEditName = !name.trim()
-    const noEditPhone = !phone.trim();
-    const noEditAddress = !address.trim();
-
-    if(noEditName){
-      cNameRef.current?.scrollIntoView({
-        behavior: "smooth",
-     block: "center",
-      })
-      cNameRef.current?.focus();
-      return
-    }
-
-    if(noEditPhone){
-      cPhoneRef.current?.scrollIntoView({
-        behavior: "smooth",
-     block: "center",
-      })
-      cPhoneRef.current?.focus();
-      return
-    }
-    if(noEditAddress){
-      cAddressRef.current?.scrollIntoView({
-        behavior: "smooth",
-     block: "center",
-      })
-      cAddressRef.current?.focus();
-      return
-    }
-    setCustomers((prev) => [...prev, {
-    id: "C-" + crypto.randomUUID(),
-    name: name.trim(),
-    phone: phone.trim(),
-    address: address.trim(),
-    balance: 0
-  }]);
+  const clearForm = () => {
     setPhone("");
     setAddress("");
     setName("");
+  };
+
+  function handleAddCustomer(e) {
+    e.preventDefault();
+
+    if (!name.trim()) {
+      focusField(cNameRef);
+      return
+    }
+    if (!address.trim()) {
+      focusField(cAddressRef);
+      return
+    }
+    if (!phone.trim()) {
+      focusField(cPhoneRef);
+      return
+    }
+
+    setCustomers((prev) => [...prev, {
+      id: "C-" + crypto.randomUUID(),
+      name: name.trim(),
+      phone: phone.trim(),
+      address: address.trim(),
+      balance: 0
+    }]);
+
+    clearForm();
     setShowForm(false);
 
   }
 
   function handleShowForm() {
-    setShowForm(prev => !prev); 
-    setName("");
-    setAddress("");
-    setPhone("");
+    setShowForm(prev => !prev);
+    clearForm();
   }
 
 
