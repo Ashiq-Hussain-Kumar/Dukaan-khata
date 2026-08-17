@@ -1,9 +1,9 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Pencil, Trash2, Phone, MapPin, Plus, Wallet, Pin, Delete, ArrowDownLeft, ArrowUpRight, ShoppingBag, RotateCcw, EllipsisVertical, X , FilePlusIcon, CreditCard, RotateCcwIcon} from "lucide-react";
+import { Pencil, Trash2, Phone, MapPin,  Delete, ArrowDownLeft, ArrowUpRight, ShoppingBag, RotateCcw, EllipsisVertical, X , FilePlusIcon, CreditCard} from "lucide-react";
 import currency from "../Utils/Currency";
 import EmptyState from "../components/Emptystate";
 import { useDataContext } from "../context/DataContext";
-import { useState, useEffect } from "react";
+import { useRef, useState, useEffect } from "react";
 import { getRunningBalances } from "../Utils/getRunningBalances";
 
 
@@ -13,16 +13,21 @@ function Customer() {
   const { id } = useParams();
   const { Customers, Transactions, setCustomers ,setTransactions} = useDataContext();
   const navigate = useNavigate();
-  const customer = Customers.find((c) => c.id === id)
+  const customer = Customers.find((c) => c.id === id);
+
+   const cNameRef = useRef(null);
+   const cPhoneRef = useRef(null);
+   const cAddressRef = useRef(null);
 
 
   const [mode, setMode] = useState("View");
+  const [deleteError, setDeleteError] = useState("");
   const [editedName, setEditedName] = useState(customer?.name);
   const [editedPhone, setEditedPhone] = useState(customer?.phone);
   const [editedAddress, setEditedAddress] = useState(customer?.address);
   const [openMenuId, setOpenMenuId] = useState(null);
   const [deleteTransaction, setDeleteTransaction] = useState({ deleteOption: false, id: null });
-  const [activeForm, setActiveForm] = useState(null); // null | "sale" | "payment" | "return"
+  
 
   useEffect(() => {
     setEditedName(customer?.name);
@@ -36,14 +41,58 @@ function Customer() {
   function handleEditCustomer(e) {
     e.preventDefault();
 
+    const noEditName = !editedName.length;
+    const noEditPhone = !editedPhone.length;
+    const noEditAddress = !editedAddress.length;
+
+    if(noEditName){
+      cNameRef.current?.scrollIntoView({
+        behavior: "smooth",
+     block: "center",
+      })
+      cNameRef.current?.focus();
+      return
+    }
+
+    if(noEditPhone){
+      cPhoneRef.current?.scrollIntoView({
+        behavior: "smooth",
+     block: "center",
+      })
+      cPhoneRef.current?.focus();
+      return
+    }
+    if(noEditAddress){
+      cAddressRef.current?.scrollIntoView({
+        behavior: "smooth",
+     block: "center",
+      })
+      cAddressRef.current?.focus();
+      return
+    }
+
     setCustomers((prev) => prev.map((c) => (c?.id === id ? { ...c, name: editedName, phone: editedPhone, address: editedAddress } : c)))
    setMode("View");
 
   }
 
+  function handleDeleteCustomerError (){
+   setDeleteError(
+    customer.balance !== 0
+      ? "A customer with a non-zero balance cannot be deleted."
+      : ""
+  );
+   setMode(mode === "Delete" ? "View" : "Delete");
+  }
+   
+
   function handleDeleteCustomer(e) {
   e.preventDefault();
+  if (customer.balance !== 0) {
+    return;
+  }
   setCustomers((prev) => prev.filter((c) => c?.id !== id));
+  setTransactions((prev)=> prev.filter((t)=>t?.customerId !== customer?.id))
   navigate("/customers");
 }
 
@@ -127,7 +176,7 @@ function handleDeleteTransaction() {
         <div className="flex justify-between items-start">
           {mode === 'View' ? (<div className="flex items-center gap-3.5">
             <div className="w-13 h-13 rounded-full bg-[#EEF0FF] text-[#4F46E5] flex items-center justify-center text-2xl font-semibold shrink-0">
-              {customer?.name[0]}
+              {customer?.name?.[0]}
 
             </div>
             <div>
@@ -136,25 +185,26 @@ function handleDeleteTransaction() {
               <p className="text-sm text-[#8A8F98] flex items-center gap-1.5 mt-0.5"><MapPin size={13} />{customer?.address}</p>
             </div>
           </div>) : mode === 'Edit' ? (<form onSubmit={handleEditCustomer} className=" p-5 mb-6 flex flex-col sm:flex-row gap-3  ">
-            <input value={editedName} onChange={(e) => setEditedName(e.target.value)} placeholder="Name" type="text" name="" id="" className="flex-1 bg-[#F7F8FB] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-sm text-[#111827] placeholder-[#9AA0AA] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 transition"
+            <input value={editedName} ref={cNameRef} onChange={(e) => setEditedName(e.target.value)} placeholder="Name" type="text" name="" id="" className="flex-1 bg-[#F7F8FB] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-sm text-[#111827] placeholder-[#9AA0AA] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 transition"
               autoFocus />
-            <input value={editedAddress} onChange={(e) => setEditedAddress(e.target.value)} placeholder="Address" type="text" name="" id="" className="flex-1 bg-[#F7F8FB] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-sm text-[#111827] placeholder-[#9AA0AA] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 transition"
+            <input value={editedAddress} ref={cAddressRef} onChange={(e) => setEditedAddress(e.target.value)} placeholder="Address" type="text" name="" id="" className="flex-1 bg-[#F7F8FB] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-sm text-[#111827] placeholder-[#9AA0AA] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 transition"
             />
-            <input value={editedPhone} onChange={(e) => setEditedPhone(e.target.value)} placeholder="Phone Number" type="tel" className="flex-1 bg-[#F7F8FB] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-sm text-[#111827] placeholder-[#9AA0AA] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 transition"
+            <input value={editedPhone} ref={cPhoneRef} onChange={(e) => setEditedPhone(e.target.value)} placeholder="Phone Number" type="tel" className="flex-1 bg-[#F7F8FB] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-sm text-[#111827] placeholder-[#9AA0AA] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 transition"
             />
             <button type="submit" className="bg-[#1c1f26] text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-[#313b49] transition cursor-pointer"> Save</button>
           </form>) :
            (<div>
-            <p className="tex-sm text-black">Are you sure you want to delete {customer?.name}? This can't be undone.</p>
+            {deleteError !== "" ? (<p className="text-m text-black">{deleteError}</p>):
+            <p className="text-m text-black">Are you sure you want to delete {customer?.name}? This can't be undone.</p>}
             <div className="flex gap-2.5 mt-1.5">
-              <button className="bg-[#E11D48] text-white text-sm font-medium px-4 py-2 rounded-xl cursor-pointer" onClick={ handleDeleteCustomer}>Yes, Delete</button>
+              {customer?.balance  === 0 && (<button className="bg-[#E11D48] text-white text-sm font-medium px-4 py-2 rounded-xl cursor-pointer" onClick={ handleDeleteCustomer}>Yes, Delete</button>)}
               <button className="bg-[#F7F8FB] text-[#111827] text-sm font-medium px-4 py-2 rounded-xl cursor-pointer" onClick={()=> setMode(mode === "Delete"? "View" :"Delete")}>Cancel</button>
             </div>
           </div>)}
           <div className="flex gap-2">
             {mode !== 'Delete' && (<button onClick={() => (setMode(mode === "Edit" ? "View" : "Edit"))} className="w-9 h-9 rounded-lg border border-[#E5E7EB] bg-[#F7F8FB] flex justify-center items-center hover:bg-[#4F46E5] hover:text-[#FFFFFF] transition cursor-pointer">{mode === "Edit" ? <X size={15} /> : <Pencil size={15} />}</button>)}
 
-            {mode !== "Edit" && (<button onClick={() => (setMode(mode === "Delete" ? "View" : "Delete"))} className="w-9 h-9 rounded-lg border border-[#E5E7EB] bg-[#F7F8FB] flex justify-center items-center hover:bg-[#ea1038] hover:text-[#FFFFFF] transition cursor-pointer">{mode === "Delete" ? <X size={15} /> : <Trash2 size={15} />}</button>)}
+            {mode !== "Edit" &&  (<button onClick={handleDeleteCustomerError} className="w-9 h-9 rounded-lg border border-[#E5E7EB] bg-[#F7F8FB] flex justify-center items-center hover:bg-[#ea1038] hover:text-[#FFFFFF] transition cursor-pointer">{mode === "Delete" ? <X size={15} /> : <Trash2 size={15} />}</button>)}
           </div>
           
         </div>
