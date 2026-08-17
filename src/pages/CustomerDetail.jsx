@@ -290,7 +290,7 @@ function Customer() {
               </div>
               <div>
                 <p className="text-[#111827]">{t?.type === "PAYMENT" ? 'Payment Received' : t?.type === "SALE" ? 'Sale' : "Return"}</p>
-                <p className="text-xs text-[#9AA0AA]">Note : {t?.note}</p>
+                <p className="text-xs text-[#9AA0AA]">Note : {t?.note || "No Note"}</p>
                 <p className="text-xs text-[#9AA0AA]">Balance: {currency(t.runningBalance)}</p>
               </div>
             </div>

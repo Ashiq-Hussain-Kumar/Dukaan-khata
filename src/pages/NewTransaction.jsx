@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import PaymentSection from "../components/PaymentSection";
 import SaleReturnSection from "../components/SaleReturnSection";
 import { ArrowLeft } from "lucide-react";
+import { focusField } from "../Utils/focusField";
 
 
 function NewTransaction() {
@@ -17,7 +18,7 @@ function NewTransaction() {
   const [newTransaction, setNewTransaction] = useState({
     id: "t-" + crypto.randomUUID(),
     customerId: id,
-    customerName: customer?.name,
+    customerName: customer?.name ?? "",
     date: "" ?? null,
     type: upperType,
     amount: "",
@@ -32,9 +33,12 @@ function NewTransaction() {
     RETURN: "bg-[#FFEEF1] text-[#E11D48]",
   };
  
+  const customerRef = useRef(null);
   const dateRef = useRef(null);
   const paymentRef = useRef(null);
   const itemRef = useRef(null);
+  const unitPriceRef = useRef(null);
+
 
 
   function handleTopLevelField(field, value) {
@@ -59,42 +63,35 @@ function handleSubmit(e) {
 
   const noPaymentAmount =
     isPayment && Number(newTransaction?.amount) === 0;
+  
+if (!newTransaction?.customerId) {
+  focusField(customerRef);
+  return;
+} 
 
-    
-    const noDate = !newTransaction?.date;
-
-if (noDate) {
-  dateRef.current?.scrollIntoView({
-    behavior: "smooth",
-    block: "center",
-  });
-
-  dateRef.current?.focus();
-
+if (!newTransaction?.date) {
+ focusField(dateRef);
   return;
 }
 
 if (noItems) {
-  itemRef.current?.scrollIntoView({
-    behavior: "smooth",
-    block: "center",
-  });
-
-  itemRef.current?.focus();
-
+  focusField(itemRef);
   return;
 }
 
  if (noPaymentAmount) {
-  paymentRef.current?.scrollIntoView({
-    behavior: "smooth",
-    block: "center",
-  });
-
-  paymentRef.current?.focus();
-
+ focusField(paymentRef);
   return;
 }
+
+for (let i = 0; i < newTransaction?.items.length; i++) {
+  if (type === "return" && Number(newTransaction?.items[i].unitPrice) <= 0) {
+    focusField(unitPriceRef);
+    return;
+  }
+}
+
+
 
   const oldBalance =
     Customers.find(
@@ -282,7 +279,8 @@ if (noItems) {
           </div>
         ) : (
           <select
-            value={newTransaction?.customerId ?? ""}
+            value={newTransaction?.customerId}
+            ref={customerRef}
             onChange={(e) =>
               handleTopLevelField("customerId", e.target.value)
             }
@@ -372,7 +370,7 @@ if (noItems) {
           <SaleReturnSection
             transaction={newTransaction}
             handelSaleReturn={handelSaleReturn}
-            itemRef={itemRef}
+            itemRef={itemRef} unitPriceRef={unitPriceRef}
           />
         )}
       </div>

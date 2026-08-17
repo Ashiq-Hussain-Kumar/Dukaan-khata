@@ -1,7 +1,7 @@
 import { Trash2, Plus } from "lucide-react";
 import  currency  from "../utils/Currency";
 
-const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef}) => {
+const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRef}) => {
   const total = transaction.items.reduce(
     (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
     0
@@ -63,10 +63,9 @@ const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef}) => {
               />
             </div>
             <div className="col-span-2">
-              <input
-              ref={itemRef}
+              <input   
                 type="number"
-                min="0"
+                min="1"
                 value={item.quantity}
                 onChange={(e) => handelSaleReturn(item?.id, "quantity", e.target.value)}
                 className="w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm text-[#111827] text-center outline-none focus:border-[#4F46E5] transition"
@@ -74,8 +73,8 @@ const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef}) => {
             </div>
             <div className="col-span-2">
               <input
-              ref={itemRef}
                 type="number"
+                ref={unitPriceRef}
                 min="0"
                 value={item.unitPrice}
                 onChange={(e) => handelSaleReturn(item?.id, "unitPrice", e.target.value)}
