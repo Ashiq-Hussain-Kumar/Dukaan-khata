@@ -170,6 +170,7 @@ function EditTransactions() {
         );
 
     const oldAmount = Number(oldTransaction?.amount) || 0;
+    
     // SALE increases balance owed; PAYMENT/RETURN decreases it.
     const sign = oldTransaction?.type === "SALE" ? 1 : -1;
 
@@ -181,7 +182,7 @@ function EditTransactions() {
       );
 
       if (!newCustomer) {
-        console.error("Selected customer not found; aborting balance update.");
+        showSnackbar("Selected customer not found; aborting balance update.");
         return;
       }
 
