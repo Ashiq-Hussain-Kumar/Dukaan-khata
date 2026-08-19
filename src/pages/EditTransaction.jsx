@@ -1,20 +1,23 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useDataContext } from "../context/DataContext";
 import { ArrowLeft } from "lucide-react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import PaymentSection from "../components/PaymentSection";
 import SaleReturnSection from "../components/SaleReturnSection";
+import { focusField } from "../Utils/focusField";
+import { hasTransactionValidationError } from "../Utils/TransationValidationError";
+import Snackbar from "../components/snackBar";
 
 
 function EditTransactions() {
-  const { transactionId   } = useParams();
+  const { transactionId } = useParams();
   const navigate = useNavigate();
-  const { Transactions, Customers, setCustomers, setTransactions  } = useDataContext();
-    const oldTransaction = Transactions.find((t) => String(t.id) === String(transactionId));
+  const { Transactions, Customers, setCustomers, setTransactions } = useDataContext();
+  const oldTransaction = Transactions.find((t) => String(t.id) === String(transactionId));
   const customer = Customers.find((c) => String(c?.id) === String(oldTransaction?.customerId));
 
   const editingTransaction = {
-    id: oldTransaction?.id ??null,
+    id: oldTransaction?.id ?? null,
     customerId: oldTransaction?.customerId ?? null,
     customerName: oldTransaction?.customerName ?? null,
     date: oldTransaction?.date ?? null,
@@ -28,28 +31,43 @@ function EditTransactions() {
   };
 
   const [editedTransaction, setEditedTransaction] = useState(editingTransaction);
+  const [snackbar, setSnackbar] = useState("");
 
-
+  const customerRef = useRef(null);
+  const dateRef = useRef(null);
+  const paymentRef = useRef(null);
+  const itemRef = useRef({});
+  const unitPriceRef = useRef({});
+  const addItemRef = useRef(null);
+  const snackbarTimer = useRef(null);
 
 
   const isInvalid = !oldTransaction || !customer;
 
-if (isInvalid) {
-  return (
-    <div className="max-w-4xl mx-auto px-6 py-8 text-center">
-      <p className="text-sm text-[#8A8F98] mb-4">Transaction not found.</p>
-      <Link to="/customers" className="text-[#4F46E5] font-medium hover:text-[#4338CA]">
-        ← Back to Customers
-      </Link>
-    </div>
-  );
-}
+  if (isInvalid) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-8 text-center">
+        <p className="text-sm text-[#8A8F98] mb-4">Transaction not found.</p>
+        <Link to="/customers" className="text-[#4F46E5] font-medium hover:text-[#4338CA]">
+          ← Back to Customers
+        </Link>
+      </div>
+    );
+  }
 
-  
- 
+
+  function showSnackbar(message) {
+    setSnackbar(message);
+
+    clearTimeout(snackbarTimer.current);
+
+    snackbarTimer.current = setTimeout(() => {
+      setSnackbar("");
+    }, 3000);
+  }
 
   function handelSaleReturn(id, field, value) {
-    
+
     if (field === "addItem") {
       setEditedTransaction((prev) => ({
         ...prev,
@@ -71,7 +89,7 @@ if (isInvalid) {
     }
 
 
-    
+
   }
 
   function handlePayments(field, value) {
@@ -85,82 +103,115 @@ if (isInvalid) {
     }
   }
 
-  
 
 
 
 
- function handleTopLevelField(field, value) {
-  if (field === "customerId") {
-    const customerName = Customers.find((c) => String(c?.id) === String(value))?.name;
-    setEditedTransaction((prev) => ({ ...prev, customerId: value, customerName }));
-  } else {
-    setEditedTransaction((prev) => ({ ...prev, [field]: value }));
+  function handleTopLevelField(field, value) {
+    if (field === "customerId") {
+      const customerName = Customers.find((c) => String(c?.id) === String(value))?.name;
+      setEditedTransaction((prev) => ({ ...prev, customerId: value, customerName }));
+    } else {
+      setEditedTransaction((prev) => ({ ...prev, [field]: value }));
+    }
   }
-}
 
-function handleSubmit(e) {
-  e.preventDefault();
+  function handleSubmit(e) {
+    e.preventDefault();
 
- const isSaleOrReturn = editedTransaction?.type === "SALE" || editedTransaction?.type === "RETURN";
-const isPayment = editedTransaction?.type === "PAYMENT";
+    const error = hasTransactionValidationError(editedTransaction);
 
-const noItems = isSaleOrReturn && (editedTransaction?.items?.length ?? 0) === 0;
-const noPaymentAmount = isPayment && Number(editedTransaction?.amount) === 0;
+    if (!editedTransaction?.customerId) {
+      showSnackbar("Please select a customer.");
+      focusField(customerRef);
+      return;
+    }
 
-if (noItems || noPaymentAmount) return;
+    if (!editedTransaction?.date) {
+      showSnackbar("Please select a date.");
+      focusField(dateRef);
+      return;
+    }
 
-  const finalAmount =
-    editedTransaction.type === "PAYMENT"
-      ? Number(editedTransaction?.amount)
-      : editedTransaction?.items.reduce(
+    if (error) {
+      showSnackbar(error.message);
+
+      if (error.type === "NO_ITEMS") {
+        focusField(addItemRef);
+        return;
+      }
+
+      if (error.type === "ITEM_NAME") {
+        itemRef.current[error?.itemId]?.scrollIntoView();
+        itemRef.current[error.itemId]?.focus();
+        return;
+      }
+
+      if (error.type === "PAYMENT_AMOUNT") {
+        focusField(paymentRef);
+        return;
+      }
+
+      if (error.type === "UNIT_PRICE") {
+        unitPriceRef.current[error?.itemId]?.scrollIntoView();
+        unitPriceRef.current[error?.itemId]?.focus();
+        return;
+      }
+    }
+
+
+
+    const finalAmount =
+      editedTransaction.type === "PAYMENT"
+        ? Number(editedTransaction?.amount)
+        : editedTransaction?.items.reduce(
           (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
           0
         );
 
-  const oldAmount = Number(oldTransaction?.amount) || 0;
-  // SALE increases balance owed; PAYMENT/RETURN decreases it.
-  const sign = oldTransaction?.type === "SALE" ? 1 : -1;
+    const oldAmount = Number(oldTransaction?.amount) || 0;
+    // SALE increases balance owed; PAYMENT/RETURN decreases it.
+    const sign = oldTransaction?.type === "SALE" ? 1 : -1;
 
-  const customerChanged = String(customer?.id) !== String(editedTransaction?.customerId);
+    const customerChanged = String(customer?.id) !== String(editedTransaction?.customerId);
 
-  if (customerChanged) {
-    const newCustomer = Customers.find(
-      (c) => String(c?.id) === String(editedTransaction?.customerId)
-    );
+    if (customerChanged) {
+      const newCustomer = Customers.find(
+        (c) => String(c?.id) === String(editedTransaction?.customerId)
+      );
 
-    if (!newCustomer) {
-      console.error("Selected customer not found; aborting balance update.");
-      return;
+      if (!newCustomer) {
+        console.error("Selected customer not found; aborting balance update.");
+        return;
+      }
+
+      const newBalanceOldC = (customer?.balance ?? 0) - sign * oldAmount;
+      const newBalanceNewC = (newCustomer.balance ?? 0) + sign * finalAmount;
+
+      setCustomers((prev) =>
+        prev.map((c) => {
+          if (c?.id === customer?.id) return { ...c, balance: newBalanceOldC };
+          if (c?.id === newCustomer.id) return { ...c, balance: newBalanceNewC };
+          return c;
+        })
+      );
+    } else if (finalAmount !== oldAmount) {
+      const delta = finalAmount - oldAmount;
+      const newBalance = (customer?.balance ?? 0) + sign * delta;
+
+      setCustomers((prev) =>
+        prev.map((c) => (c?.id === customer?.id ? { ...c, balance: newBalance } : c))
+      );
     }
 
-    const newBalanceOldC = (customer?.balance ?? 0) - sign * oldAmount;
-    const newBalanceNewC = (newCustomer.balance ?? 0) + sign * finalAmount;
-
-    setCustomers((prev) =>
-      prev.map((c) => {
-        if (c?.id === customer?.id) return { ...c, balance: newBalanceOldC };
-        if (c?.id === newCustomer.id) return { ...c, balance: newBalanceNewC };
-        return c;
-      })
+    setTransactions((prev) =>
+      prev.map((t) =>
+        t?.id === editedTransaction?.id ? { ...editedTransaction, amount: finalAmount } : t
+      )
     );
-  } else if (finalAmount !== oldAmount) {
-    const delta = finalAmount - oldAmount;
-    const newBalance = (customer?.balance ?? 0) + sign * delta;
 
-    setCustomers((prev) =>
-      prev.map((c) => (c?.id === customer?.id ? { ...c, balance: newBalance } : c))
-    );
+    navigate(`/customers/${customer?.id}`);
   }
-
-  setTransactions((prev) =>
-    prev.map((t) =>
-      t?.id === editedTransaction?.id ? { ...editedTransaction, amount: finalAmount } : t
-    )
-  );
-
-  navigate(`/customers/${customer?.id}`);
-}
 
   const typeStyles = {
     SALE: "bg-[#EBFBEF] text-[#16A34A]",
@@ -169,7 +220,7 @@ if (noItems || noPaymentAmount) return;
   };
 
   return (
-    
+
     <div className="max-w-4xl mx-auto px-6 py-8">
       <Link
         to={`/customers/${customer?.id}`}
@@ -201,6 +252,7 @@ if (noItems || noPaymentAmount) return;
             <div>
               <label className="block text-sm font-medium text-[#111827] mb-2">Customer</label>
               <select
+                ref={customerRef}
                 value={editedTransaction?.customerId ?? ""}
                 onChange={(e) => handleTopLevelField("customerId", e.target.value)}
                 className="w-full rounded-xl border border-[#E5E7EB] bg-[#F7F8FB] px-3.5 py-2.5 text-sm text-[#111827] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 transition"
@@ -217,6 +269,7 @@ if (noItems || noPaymentAmount) return;
               <label className="block text-sm font-medium text-[#111827] mb-2">Date</label>
               <input
                 type="date"
+                ref={dateRef}
                 value={editedTransaction?.date ?? ""}
                 onChange={(e) => handleTopLevelField("date", e.target.value)}
                 className="w-full rounded-xl border border-[#E5E7EB] bg-[#F7F8FB] px-3.5 py-2.5 text-sm text-[#111827] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 transition"
@@ -225,9 +278,9 @@ if (noItems || noPaymentAmount) return;
           </div>
 
           {editedTransaction.type === "PAYMENT" ? (
-            <PaymentSection transaction={editedTransaction} handlePayments={handlePayments} />
+            <PaymentSection transaction={editedTransaction} handlePayments={handlePayments} paymentRef={paymentRef} />
           ) : (
-            <SaleReturnSection transaction={editedTransaction} handelSaleReturn={handelSaleReturn} />
+            <SaleReturnSection transaction={editedTransaction} handelSaleReturn={handelSaleReturn} itemRef={itemRef} unitPriceRef={unitPriceRef} addItemRef={addItemRef} />
           )}
 
           <div>
@@ -257,6 +310,10 @@ if (noItems || noPaymentAmount) return;
             </button>
           </div>
         </form>
+        {snackbar && (<Snackbar
+          message={snackbar}
+          onClose={() => setSnackbar("")}
+        />)}
       </div>
     </div>
   );

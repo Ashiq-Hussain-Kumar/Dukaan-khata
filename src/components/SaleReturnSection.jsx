@@ -1,7 +1,7 @@
 import { Trash2, Plus } from "lucide-react";
 import  currency  from "../utils/Currency";
 
-const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRef}) => {
+const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRef, addItemRef}) => {
   const total = transaction.items.reduce(
     (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
     0
@@ -30,6 +30,7 @@ const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRe
           {transaction.type === "SALE" ? "Items Sold" : "Returned Items"}
         </h2>
         <button
+        ref={addItemRef}
           type="button"
           onClick={() => handelSaleReturn("item-" + crypto.randomUUID(), "addItem", null)}
           className="flex items-center gap-1.5 bg-[#4F46E5] text-white text-sm font-medium px-3.5 py-2 rounded-xl shadow-[0_4px_14px_rgba(79,70,229,0.35)] hover:bg-[#4338CA] transition"
@@ -56,7 +57,9 @@ const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRe
           >
             <div className="col-span-4">
               <input
-              ref={itemRef}
+              ref={(el) => {
+    itemRef.current[item.id] = el;
+  }}
                 value={item.name}
                 onChange={(e) => handelSaleReturn(item?.id, "name", e.target.value)}
                 className="w-full rounded-lg border border-[#E5E7EB] px-3 py-2 text-sm text-[#111827] outline-none focus:border-[#4F46E5] transition"
@@ -74,7 +77,9 @@ const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRe
             <div className="col-span-2">
               <input
                 type="number"
-                ref={unitPriceRef}
+                 ref={(el) => {
+    unitPriceRef.current[item.id] = el;
+  }}
                 min="0"
                 value={item.unitPrice}
                 onChange={(e) => handelSaleReturn(item?.id, "unitPrice", e.target.value)}
