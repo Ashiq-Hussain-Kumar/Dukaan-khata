@@ -6,7 +6,7 @@ import SaleReturnSection from "../components/SaleReturnSection";
 import { ArrowLeft } from "lucide-react";
 import { focusField } from "../utils/focusField";
 import  {hasTransactionValidationError}  from "../utils/TransactionValidationError";
-import Snackbar from "../components/snackBar";
+import Snackbar from "../components/SnackBar";
 
 
 function NewTransaction() {
