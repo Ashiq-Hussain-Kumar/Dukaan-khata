@@ -4,8 +4,8 @@ import { ArrowLeft } from "lucide-react";
 import { useState, useRef } from "react";
 import PaymentSection from "../components/PaymentSection";
 import SaleReturnSection from "../components/SaleReturnSection";
-import { focusField } from "../Utils/focusField";
-import { hasTransactionValidationError } from "../Utils/TransationValidationError";
+import { focusField } from "../utils/focusField";
+import { hasTransactionValidationError } from "../utils/TransationValidationError";
 import Snackbar from "../components/snackBar";
 
 

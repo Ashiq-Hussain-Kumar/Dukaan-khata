@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import StatCard from "../components/StatCard";
-import currency from "../Utils/Currency";
+import currency from "../utils/Currency";
 import EmptyState from "../components/Emptystate"
 import { useDataContext } from "../context/DataContext";
 import { ReceiptIndianRupee, ShoppingBag, TrendingUp } from "lucide-react";

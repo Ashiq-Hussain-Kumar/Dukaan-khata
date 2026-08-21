@@ -2,7 +2,7 @@
 import StatCard from "../components/StatCard"
 
 import {ReceiptIndianRupee, TrendingDown, TrendingUp } from "lucide-react";
-import currency from "../Utils/Currency";
+import currency from "../utils/Currency";
 import EmptyState from "../components/Emptystate"
 import { useDataContext } from "../context/DataContext";
 

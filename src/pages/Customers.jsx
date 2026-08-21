@@ -3,9 +3,9 @@ import { useDataContext } from "../context/DataContext";
 import { useMemo, useState, useRef } from "react";
 import Customer from "./CustomerDetail";
 import { Link } from "react-router-dom";
-import currency from "../Utils/Currency";
+import currency from "../utils/Currency";
 import EmptyState from "../components/Emptystate";
-import { focusField } from "../Utils/focusField";
+import { focusField } from "../utils/focusField";
 
 function Customers() {
 

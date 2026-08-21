@@ -1,11 +1,11 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Pencil, Trash2, Phone, MapPin, Delete, ArrowDownLeft, ArrowUpRight, ShoppingBag, RotateCcw, EllipsisVertical, X, FilePlusIcon, CreditCard } from "lucide-react";
-import currency from "../Utils/Currency";
+import currency from "../utils/Currency";
 import EmptyState from "../components/Emptystate";
 import { useDataContext } from "../context/DataContext";
 import { useRef, useState, useEffect } from "react";
-import { getRunningBalances } from "../Utils/getRunningBalances";
-import { focusField } from "../Utils/focusField";
+import { getRunningBalances } from "../utils/getRunningBalances";
+import { focusField } from "../utils/focusField";
 
 
 
