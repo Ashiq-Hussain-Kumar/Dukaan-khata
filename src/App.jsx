@@ -4,7 +4,8 @@ import Sidebar from '../src/components/Sidebar';
 import "./app.css";
 import { DataProvider } from './context/DataContext';
 import Customers from "../src/pages/Customers";
-import Sales from "../src/pages/sales";
+import Sales from "../src/pages/Sales";
+
 import Customer from "../src/pages/CustomerDetail";
 import EditTransactions from "../src/pages/EditTransaction";
 import NewTransaction from "../src/pages/NewTransaction";

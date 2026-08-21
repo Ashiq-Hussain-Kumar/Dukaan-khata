@@ -500,7 +500,7 @@ if (error) {
             onClick={() =>
               customer?.id
                 ? navigate(`/customers/${customer.id}`)
-                : navigate("/customers")
+                : navigate(-1)
             }
             className="
           border border-[#E5E7EB]
