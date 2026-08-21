@@ -18,9 +18,9 @@ function Dashboard() {
       <p className="text-sm text-[#576379] mb-8">A quick look at how the shop is doing today</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-        <StatCard icon={ReceiptIndianRupee} label={`Total sales`} value={totalSales} tone="indigo"/>
-        <StatCard icon={TrendingUp} label={`Total Collected`} value={totalCollected} tone="green"/>
-        <StatCard icon={TrendingDown} label={`Due Oustanding`} value={totalBalance} tone="rose"/>
+        <StatCard icon={ReceiptIndianRupee} label={`Total sales`} value={currency(totalSales)} tone="indigo"/>
+        <StatCard icon={TrendingUp} label={`Total Collected`} value={currency(totalCollected)} tone="green"/>
+        <StatCard icon={TrendingDown} label={`Due Oustanding`} value={currency(totalBalance)} tone="rose"/>
       </div>
     </div>
 

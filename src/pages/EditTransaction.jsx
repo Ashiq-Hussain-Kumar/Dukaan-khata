@@ -5,7 +5,7 @@ import { useState, useRef } from "react";
 import PaymentSection from "../components/PaymentSection";
 import SaleReturnSection from "../components/SaleReturnSection";
 import { focusField } from "../utils/focusField";
-import { hasTransactionValidationError } from "../utils/TransationValidationError";
+import  {hasTransactionValidationError} from "../utils/TransactionValidationError";
 import Snackbar from "../components/snackBar";
 
 
