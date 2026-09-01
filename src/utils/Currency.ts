@@ -1,4 +1,4 @@
-export default function currency(n) {
+export default function currency(n:number):string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency: "INR",

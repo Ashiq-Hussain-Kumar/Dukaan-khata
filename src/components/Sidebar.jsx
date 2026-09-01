@@ -48,7 +48,7 @@ function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
         </div>
 
         <span
-          className="text-[#111827] font-semibold text-[17px] tracking-tight"
+          className="text-[#111827] font-semibold text-[17px] sm:font-light tracking-tight"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
           Dukaan Khati
