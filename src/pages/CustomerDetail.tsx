@@ -1,17 +1,23 @@
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Pencil, Trash2, Phone, MapPin, Delete, ArrowDownLeft, ArrowUpRight, ShoppingBag, RotateCcw, EllipsisVertical, X, FilePlusIcon, CreditCard } from "lucide-react";
+import { Pencil, Trash2, Phone, MapPin, ArrowDownLeft, ShoppingBag, RotateCcw, EllipsisVertical, X, FilePlusIcon, CreditCard } from "lucide-react";
 import currency from "../utils/Currency";
 import EmptyState from "../components/Emptystate";
 import { useDataContext } from "../context/DataContext";
-import { useRef, useState, useEffect } from "react";
+import React, { useRef, useState, useEffect,} from "react";
 import { getRunningBalances } from "../utils/getRunningBalances";
 import { focusField } from "../utils/focusField";
+import type { Customer } from "../types";
 
+type Mode = "View" | "Edit" | "Delete";
 
+type DeleteTransaction = {
+  deleteOption: boolean;
+  id: string | null;
+};
 
 
 function Customer() {
-  const { id } = useParams();
+  const { id } = useParams<{id:string|undefined}>();
   const { Customers, Transactions, setCustomers, setTransactions } = useDataContext();
   const navigate = useNavigate();
   const customer = Customers.find((c) => c.id === id);
@@ -21,25 +27,25 @@ function Customer() {
   const cAddressRef = useRef(null);
 
 
-  const [mode, setMode] = useState("View");
+  const [mode, setMode] = useState<Mode>("View");
   const [deleteError, setDeleteError] = useState("");
-  const [editedName, setEditedName] = useState(customer?.name);
-  const [editedPhone, setEditedPhone] = useState(customer?.phone);
-  const [editedAddress, setEditedAddress] = useState(customer?.address);
-  const [openMenuId, setOpenMenuId] = useState(null);
-  const [deleteTransaction, setDeleteTransaction] = useState({ deleteOption: false, id: null });
+  const [editedName, setEditedName] = useState(customer?.name ?? "");
+  const [editedPhone, setEditedPhone] = useState(customer?.phone ?? "");
+  const [editedAddress, setEditedAddress] = useState(customer?.address ??"");
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [deleteTransaction, setDeleteTransaction] = useState<DeleteTransaction>({ deleteOption: false, id: null });
 
 
   useEffect(() => {
-    setEditedName(customer?.name);
-    setEditedPhone(customer?.phone);
-    setEditedAddress(customer?.address);
+    setEditedName(customer?.name ?? "");
+    setEditedPhone(customer?.phone ?? "");
+    setEditedAddress(customer?.address ?? "");
   }, [customer?.id]);
 
 
 
 
-  function handleEditCustomer(e) {
+  function handleEditCustomer(e:React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
 
     if (!editedName.trim()) {
@@ -56,14 +62,14 @@ function Customer() {
     }
 
 
-    setCustomers((prev) => prev.map((c) => (c?.id === id ? { ...c, name: editedName, phone: editedPhone, address: editedAddress } : c)))
+    setCustomers((prev:Customer[]) => prev.map((c) => (c?.id === id ? { ...c, name: editedName, phone: editedPhone, address: editedAddress } : c)))
     setMode("View");
 
   }
 
   function handleDeleteCustomerError() {
     setDeleteError(
-      customer.balance !== 0
+      customer?.balance !== 0
         ? "A customer with a non-zero balance cannot be deleted."
         : ""
     );
@@ -71,9 +77,9 @@ function Customer() {
   }
 
 
-  function handleDeleteCustomer(e) {
+  function handleDeleteCustomer(e:React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
-    if (customer.balance !== 0) {
+    if (customer?.balance !== 0) {
       return;
     }
     setCustomers((prev) => prev.filter((c) => c?.id !== id));

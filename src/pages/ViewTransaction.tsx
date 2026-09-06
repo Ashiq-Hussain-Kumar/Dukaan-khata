@@ -1,4 +1,4 @@
-import  {useState} from "react";
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -9,8 +9,6 @@ import {
   Calendar,
   CreditCard,
   FileText,
-  ImageOff,
-  Import,
 } from "lucide-react";
 import { useDataContext } from "../context/DataContext";
 
@@ -23,10 +21,16 @@ const typeStyles = {
 
 
 function ViewTransaction() {
-   const { Customers, Transactions, setCustomers, setTransactions } = useDataContext();
+  const { Customers, Transactions, setCustomers, setTransactions } = useDataContext();
   const navigate = useNavigate();
   const { id } = useParams();
-   const [deleteTransaction, setDeleteTransaction] = useState({ deleteOption: false, id: null });
+  const [deleteTransaction, setDeleteTransaction] = useState<{
+    deleteOption: boolean;
+    id: string | undefined |null;
+  }>({
+    deleteOption: false,
+    id: null,
+  });
 
 
   /* --------------------------------
@@ -113,12 +117,12 @@ function ViewTransaction() {
     transaction?.type === "PAYMENT"
       ? Number(transaction?.amount ?? 0)
       : items.reduce(
-          (sum, item) =>
-            sum +
-            Number(item?.quantity ?? 0) *
-              Number(item?.unitPrice ?? 0),
-          0
-        );
+        (sum, item) =>
+          sum +
+          Number(item?.quantity ?? 0) *
+          Number(item?.unitPrice ?? 0),
+        0
+      );
 
   const finalAmount = Number(
     transaction?.amount ?? calculatedAmount
@@ -132,89 +136,21 @@ function ViewTransaction() {
     navigate(`/EditTransaction/${transaction.id}`);
   };
 
-  const handleDelete = () => {
-    const confirmed = window.confirm(
-      `Delete this transaction? This can't be undone.`
-    );
-
-    if (!confirmed) return;
-
-    /*
-      Delete transaction
-    */
-    if (setTransactions) {
-      setTransactions((prev) =>
-        prev.filter(
-          (t) =>
-            String(t?.id) !== String(transaction?.id)
-        )
-      );
-    }
-
-    /*
-      Reverse the transaction's effect
-      on customer's balance
-    */
-    if (setCustomers && customer) {
-      setCustomers((prev) =>
-        prev.map((c) => {
-          if (
-            String(c?.id) !==
-            String(customer?.id)
-          ) {
-            return c;
-          }
-
-          const currentBalance =
-            Number(c?.balance ?? 0);
-
-          /*
-            SALE originally added money,
-            so deleting it subtracts it.
-
-            PAYMENT / RETURN originally
-            subtracted money, so deleting
-            them adds it back.
-          */
-
-          let newBalance = currentBalance;
-
-          if (transaction?.type === "SALE") {
-            newBalance =
-              currentBalance - finalAmount;
-          } else if (
-            transaction?.type === "PAYMENT" ||
-            transaction?.type === "RETURN"
-          ) {
-            newBalance =
-              currentBalance + finalAmount;
-          }
-
-          return {
-            ...c,
-            balance: newBalance,
-          };
-        })
-      );
-    }
-
-    navigate(-1);
-  };
 
   function handleDeleteTransaction() {
-  const t = Transactions.find((tr) => tr.id === deleteTransaction.id);
-  const cust = Customers.find((c) => c.id === t?.customerId);
+    const t = Transactions.find((tr) => tr.id === deleteTransaction.id);
+    const cust = Customers.find((c) => c.id === t?.customerId);
 
-  if (t?.type === "SALE") {
-    setCustomers((prev) => prev.map((c) => (c?.id === cust?.id ? { ...c, balance: cust.balance - t.amount } : c)));
-  } else if (t?.type === "PAYMENT" || t?.type === "RETURN") {
-    setCustomers((prev) => prev.map((c) => (c?.id === cust?.id ? { ...c, balance: cust.balance + t.amount } : c)));
+    if (t?.type === "SALE") {
+      setCustomers((prev) => prev.map((c) => (c?.id === cust?.id ? { ...c, balance: cust.balance - t.amount } : c)));
+    } else if (t?.type === "PAYMENT" || t?.type === "RETURN") {
+      setCustomers((prev) => prev.map((c) => (c?.id === cust?.id ? { ...c, balance: cust.balance + t.amount } : c)));
+    }
+
+    setTransactions((prev) => prev.filter((tr) => tr.id !== deleteTransaction.id));
+    setDeleteTransaction({ deleteOption: false, id: null });
+    navigate(`/customers/${customer?.id}`);
   }
-
-  setTransactions((prev) => prev.filter((tr) => tr.id !== deleteTransaction.id));
-  setDeleteTransaction({ deleteOption: false, id: null });
-  navigate(`/customers/${customer?.id}`);
-}
 
   /* --------------------------------
      Format Date
@@ -222,27 +158,27 @@ function ViewTransaction() {
 
   const formattedDate = transaction?.date
     ? new Date(
-        `${transaction.date}T00:00:00`
-      ).toLocaleDateString("en-IN", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-      })
+      `${transaction.date}T00:00:00`
+    ).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    })
     : "—";
 
   return (
     <div className="min-h-screen bg-[#F7F8FB]">
 
       {deleteTransaction.deleteOption && (
-  <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50">
-  <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl">
-    <p className="text-sm leading-6 text-[#111827] mb-5">
-      Delete this transaction? This action cannot be undone.
-    </p>
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl p-6 w-80 shadow-2xl">
+            <p className="text-sm leading-6 text-[#111827] mb-5">
+              Delete this transaction? This action cannot be undone.
+            </p>
 
-    <div className="flex justify-end gap-2">
-      <button
-        className="
+            <div className="flex justify-end gap-2">
+              <button
+                className="
           px-4 py-2 rounded-xl
           bg-[#F7F8FB] text-[#374151]
           text-sm font-medium
@@ -254,18 +190,18 @@ function ViewTransaction() {
           active:bg-[#E5E7EB]
           focus:outline-none focus:ring-2 focus:ring-[#E5E7EB]
         "
-        onClick={() =>
-          setDeleteTransaction({
-            deleteOption: false,
-            id: null,
-          })
-        }
-      >
-        Cancel
-      </button>
+                onClick={() =>
+                  setDeleteTransaction({
+                    deleteOption: false,
+                    id: null,
+                  })
+                }
+              >
+                Cancel
+              </button>
 
-      <button
-        className="
+              <button
+                className="
           px-4 py-2 rounded-xl
           bg-[#E11D48] text-white
           text-sm font-medium
@@ -276,14 +212,14 @@ function ViewTransaction() {
           active:bg-[#9F1239]
           focus:outline-none focus:ring-2 focus:ring-[#FDA4AF] focus:ring-offset-1
         "
-        onClick={handleDeleteTransaction}
-      >
-        Yes, Delete
-      </button>
-    </div>
-  </div>
-</div>
-)}
+                onClick={handleDeleteTransaction}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="max-w-6xl mx-auto px-6 py-8">
 
@@ -354,10 +290,9 @@ function ViewTransaction() {
                   px-3 py-1
                   rounded-full
                   text-xs font-semibold
-                  ${
-                    typeStyles[
-                      transaction?.type
-                    ] ?? ""
+                  ${typeStyles[
+                  transaction?.type
+                  ] ?? ""
                   }
                 `}
               >
@@ -401,7 +336,7 @@ function ViewTransaction() {
 
             <button
               type="button"
-              onClick={()=>  setDeleteTransaction({deleteOption:true,id:id})}
+              onClick={() => setDeleteTransaction({ deleteOption: true, id: id })}
               className="
                 inline-flex items-center gap-2
                 px-4 py-2.5
@@ -603,12 +538,12 @@ function ViewTransaction() {
               {(transaction?.type === "SALE" ||
                 transaction?.type === "RETURN") && (
 
-                <div>
+                  <div>
 
-                  {/* Table Header */}
+                    {/* Table Header */}
 
-                              <div
-  className="
+                    <div
+                      className="
     grid
     grid-cols-[minmax(0,1fr)_100px_140px_140px]
     items-center
@@ -621,40 +556,40 @@ function ViewTransaction() {
     font-medium
     text-[#8A8F98]
   "
->
-  <span>Item</span>
+                    >
+                      <span>Item</span>
 
-  <span className="text-right">
-    Quantity
-  </span>
+                      <span className="text-right">
+                        Quantity
+                      </span>
 
-  <span className="text-right">
-    Unit Price
-  </span>
+                      <span className="text-right">
+                        Unit Price
+                      </span>
 
-  <span className="text-right">
-    Total
-  </span>
-</div>
+                      <span className="text-right">
+                        Total
+                      </span>
+                    </div>
 
 
-                  {/* Items */}
+                    {/* Items */}
 
-                  <div className="
+                    <div className="
                     divide-y
                     divide-[#F1F2F6]
                   ">
 
-                    {items.length > 0 ? (
-                     items.map((item, index) => {
-  const itemTotal =
-    Number(item?.quantity ?? 0) *
-    Number(item?.unitPrice ?? 0);
+                      {items.length > 0 ? (
+                        items.map((item, index) => {
+                          const itemTotal =
+                            Number(item?.quantity ?? 0) *
+                            Number(item?.unitPrice ?? 0);
 
-  return (
-    <div
-      key={item?.id ?? index}
-      className="
+                          return (
+                            <div
+                              key={item?.id ?? index}
+                              className="
         grid
         grid-cols-[minmax(0,1fr)_100px_140px_140px]
         items-center
@@ -665,47 +600,47 @@ function ViewTransaction() {
         border-[#F1F2F6]
         last:border-0
       "
-    >
-      {/* Item */}
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-[#111827] ">
-          {item?.name || "Unnamed Item"}
-        </p>
-      </div>
+                            >
+                              {/* Item */}
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-[#111827] ">
+                                  {item?.name || "Unnamed Item"}
+                                </p>
+                              </div>
 
-      {/* Quantity */}
-      <p className="text-sm text-[#374151] text-right tabular-nums">
-        {item?.quantity ?? 0}
-      </p>
+                              {/* Quantity */}
+                              <p className="text-sm text-[#374151] text-right tabular-nums">
+                                {item?.quantity ?? 0}
+                              </p>
 
-      {/* Unit Price */}
-      <p className="text-sm text-[#374151] text-right tabular-nums">
-        ₹{Number(item?.unitPrice ?? 0).toLocaleString("en-IN")}
-      </p>
+                              {/* Unit Price */}
+                              <p className="text-sm text-[#374151] text-right tabular-nums">
+                                ₹{Number(item?.unitPrice ?? 0).toLocaleString("en-IN")}
+                              </p>
 
-      {/* Total */}
-      <p className="text-sm font-semibold text-[#111827] text-right tabular-nums">
-        ₹{itemTotal.toLocaleString("en-IN")}
-      </p>
-    </div>
-  );
-})               ) : (
-                      <div className="
+                              {/* Total */}
+                              <p className="text-sm font-semibold text-[#111827] text-right tabular-nums">
+                                ₹{itemTotal.toLocaleString("en-IN")}
+                              </p>
+                            </div>
+                          );
+                        })) : (
+                        <div className="
                         px-6 py-10
                         text-center
                         text-sm
                         text-[#8A8F98]
                       ">
-                        No items in this transaction.
-                      </div>
-                    )}
+                          No items in this transaction.
+                        </div>
+                      )}
 
-                  </div>
+                    </div>
 
 
-                  {/* Total */}
+                    {/* Total */}
 
-                  <div className="
+                    <div className="
                     px-6 py-5
                     border-t border-[#F1F2F6]
                     bg-[#F7F8FB]
@@ -714,29 +649,29 @@ function ViewTransaction() {
                     justify-between
                   ">
 
-                    <span className="
+                      <span className="
                       text-sm
                       font-medium
                       text-[#6B7280]
                     ">
-                      Total Amount
-                    </span>
+                        Total Amount
+                      </span>
 
-                    <span className="
+                      <span className="
                       text-2xl
                       font-semibold
                       text-[#111827]
                     ">
-                      ₹
-                      {finalAmount.toLocaleString(
-                        "en-IN"
-                      )}
-                    </span>
+                        ₹
+                        {finalAmount.toLocaleString(
+                          "en-IN"
+                        )}
+                      </span>
+
+                    </div>
 
                   </div>
-
-                </div>
-              )}
+                )}
 
 
               {/* PAYMENT */}
@@ -983,12 +918,11 @@ function ViewTransaction() {
                   text-2xl
                   font-semibold
                   mt-2
-                  ${
-                    Number(
-                      customer?.balance ?? 0
-                    ) > 0
-                      ? "text-[#E11D48]"
-                      : "text-[#16A34A]"
+                  ${Number(
+                  customer?.balance ?? 0
+                ) > 0
+                    ? "text-[#E11D48]"
+                    : "text-[#16A34A]"
                   }
                 `}
               >
@@ -1068,7 +1002,8 @@ function ViewTransaction() {
       </div>
 
     </div>
-  );}
+  );
+}
 
 
 export default ViewTransaction;

@@ -1,14 +1,14 @@
 import { Routes, Route } from "react-router-dom";
-import Dashboard from "../src/pages/Dashboard";
-import Sidebar from "../src/components/Sidebar";
+import Dashboard from "./pages/Dashboard";
+import Sidebar from "./components/Sidebar";
 import "./app.css";
 import { DataProvider } from "./context/DataContext";
-import Customers from "../src/pages/Customers";
-import Sales from "../src/pages/Sales";
-import Customer from "../src/pages/CustomerDetail";
-import EditTransactions from "../src/pages/EditTransaction";
-import NewTransaction from "../src/pages/NewTransaction";
-import ViewTransaction from "../src/pages/ViewTransaction";
+import Customers from "./pages/Customers";
+import Sales from "./pages/Sales";
+import Customer from "./pages/CustomerDetail";
+import EditTransactions from "./pages/EditTransaction";
+import NewTransaction from "./pages/NewTransaction";
+import ViewTransaction from "./pages/ViewTransaction";
 import { Menu } from "lucide-react";
 import { useState } from "react";
 

@@ -1,13 +1,45 @@
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link,  } from "react-router-dom";
 import { useDataContext } from "../context/DataContext";
-import { useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import PaymentSection from "../components/PaymentSection";
 import SaleReturnSection from "../components/SaleReturnSection";
 import { ArrowLeft } from "lucide-react";
 import { focusField } from "../utils/focusField";
 import  {hasTransactionValidationError}  from "../utils/TransactionValidationError";
 import Snackbar from "../components/SnackBar";
+import { NewTransactionInterface, Transaction } from "../types";
 
+
+type ItemRefs = Record<string, HTMLInputElement | null>;
+type SaleReturnField =
+  | "reason"
+  | "addItem"
+  | "delete"
+  | "name"
+  | "quantity"
+  | "unitPrice";
+type PaymentField =
+  | "amount"
+  | "method"
+  | "reference"
+  | "receivedBy";
+
+type TopLevelField =
+  | "customerId"
+  | "date"
+  | "note";
+  type TransactionType = "SALE" | "RETURN" | "PAYMENT";
+
+
+  function isTransactionType(
+  value: string | undefined
+): value is TransactionType {
+  return (
+    value === "SALE" ||
+    value === "RETURN" ||
+    value === "PAYMENT"
+  );
+}
 
 function NewTransaction() {
   const { id, type } = useParams();
@@ -15,20 +47,21 @@ function NewTransaction() {
   const { Customers, setCustomers, setTransactions } = useDataContext();
 
   const customer = Customers.find((c) => String(c?.id) === String(id));
-  const upperType = type?.toUpperCase(); // "SALE" | "PAYMENT" | "RETURN"
+  
+  const upperType   = type?.toUpperCase() as TransactionType; 
 
  
 
 
-  const [newTransaction, setNewTransaction] = useState({
+  const [newTransaction, setNewTransaction] = useState<NewTransactionInterface>({
     id: "t-" + crypto.randomUUID(),
     customerId: id,
     customerName: customer?.name ?? "",
     date: "",
     type: upperType,
-    amount: "",
+    amount:0,
     note: "",
-    items: [{ id: crypto.randomUUID(), name: "", quantity: 1, unitPrice: 0 }],
+    items: [{ id: crypto.randomUUID(), name: "", quantity: 1, unitPrice: 0 }]  ,
     payment: null,
     return: null,
   });
@@ -40,18 +73,15 @@ function NewTransaction() {
     RETURN: "bg-[#FFEEF1] text-[#E11D48]",
   };
 
-  const customerRef = useRef(null);
-  const dateRef = useRef(null);
-  const paymentRef = useRef(null);
-  const itemRef = useRef({});
-  const unitPriceRef = useRef({});
-  const addItemRef = useRef(null);
-  const snackbarTimer = useRef(null);
+  const customerRef = useRef<HTMLSelectElement | null>(null);
+  const dateRef = useRef<HTMLInputElement | null>(null);
+  const paymentRef = useRef<HTMLInputElement | null>(null);
+  const itemRef = useRef<ItemRefs>({});
+  const unitPriceRef = useRef<ItemRefs>({});
+  const addItemRef = useRef<HTMLButtonElement | null>(null);
+  const snackbarTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
-   const validTypes = ["SALE", "RETURN", "PAYMENT"];
-
-const isValidType = validTypes.includes(upperType);
-
+const isValidType = isTransactionType(upperType);
 
 if (!isValidType) {
   return (
@@ -99,21 +129,23 @@ if (isCustomerRoute && !customer) {
   );
 }
 
-function showSnackbar(message) {
+function showSnackbar(message:string) {
   setSnackbar(message);
 
-  clearTimeout(snackbarTimer.current);
+ if(snackbarTimer.current !== null){
+   clearTimeout(snackbarTimer.current);
+  }
 
   snackbarTimer.current = setTimeout(() => {
     setSnackbar("");
   }, 3000);
 }
 
-  function handleTopLevelField(field, value) {
+  function handleTopLevelField(field:TopLevelField, value:string) {
     setNewTransaction((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleSubmit(e) {
+  function handleSubmit(e:React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
 
    const error = hasTransactionValidationError(newTransaction);
@@ -200,16 +232,23 @@ if (error) {
     const selectedCustomer = Customers.find(
       (c) => String(c?.id) === String(newTransaction?.customerId)
     );
-
-    const finalTransaction = {
+    if (!newTransaction.customerId) {
+  return;
+}
+    const finalTransaction:Transaction = {
       ...newTransaction,
+      customerId:newTransaction.customerId,
       customerName: selectedCustomer?.name ?? "",
       amount: finalAmount,
+      type:upperType,
       items:
         newTransaction?.type === "PAYMENT"
-          ? null
-          : newTransaction?.items,
+          ? []
+          : (newTransaction?.items ?? []),
     };
+
+   if(finalTransaction.type === undefined) return;
+
 
     setTransactions((prev) => [
       ...prev,
@@ -218,13 +257,15 @@ if (error) {
 
     navigate(-1);
   }
-  function handelSaleReturn(id, field, value) {
+  function handelSaleReturn(id:string | null,  field :SaleReturnField, value :string|null ) {
     if (field === "addItem") {
+      if(id === null || newTransaction.items === null) return;
       setNewTransaction((prev) => ({
         ...prev,
         items: [...prev.items, { id, name: "", quantity: 1, unitPrice: 0 }],
       }));
     } else if (field === "reason") {
+      if(typeof(value) === "number" && value === null) return;
       setNewTransaction((prev) => ({ ...prev, return: { reason: value } }));
     } else if (field === "delete") {
       setNewTransaction((prev) => ({
@@ -239,16 +280,70 @@ if (error) {
       }));
     }
   }
-  function handlePayments(field, value) {
-    if (field !== "amount") {
+ function handlePayments(
+    field: PaymentField,
+    value: string
+  ) {
+    // PAYMENT AMOUNT
+    if (field === "amount") {
       setNewTransaction((prev) => ({
         ...prev,
-        payment: { ...prev.payment, [field]: value },
+        amount: Number(value),
       }));
-    } else {
-      setNewTransaction((prev) => ({ ...prev, amount: value }));
+
+      return;
     }
 
+    // PAYMENT OBJECT SHOULD EXIST
+    if (newTransaction.payment === null) {
+      return;
+    }
+
+    // METHOD
+    if (field === "method") {
+      if (
+        value !== "Cash" &&
+        value !== "UPI" &&
+        value !== "Card" &&
+        value !== "Bank Transfer"
+      ) {
+        return;
+      }
+
+      setNewTransaction((prev) => ({
+        ...prev,
+        payment: {
+          ...prev.payment!,
+          method: value,
+        },
+      }));
+
+      return;
+    }
+
+    // REFERENCE
+    if (field === "reference") {
+      setNewTransaction((prev) => ({
+        ...prev,
+        payment: {
+          ...prev.payment!,
+          reference: value,
+        },
+      }));
+
+      return;
+    }
+
+    // RECEIVED BY
+    if (field === "receivedBy") {
+      setNewTransaction((prev) => ({
+        ...prev,
+        payment: {
+          ...prev.payment!,
+          receivedBy: value,
+        },
+      }));
+    }
   }
 
   return (
@@ -296,7 +391,7 @@ if (error) {
           px-4 py-1.5
           rounded-full
           text-xs font-semibold
-          ${typeStyles[upperType] ?? ""}
+          ${typeStyles[upperType as keyof typeof typeStyles] ?? "" }
         `}
           >
             {upperType}

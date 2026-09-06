@@ -1,9 +1,4 @@
-interface Transaction {
-id:string,
-date:string,
-type: "SALE"|"RETURN"|"PAYMENT",
-amount:number
-}
+import type { Transaction } from "../types";
 
 interface WithRunningBalance extends Transaction {
   runningBalance: number; 

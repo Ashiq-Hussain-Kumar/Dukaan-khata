@@ -1,8 +1,6 @@
 import { X, Plus, Search } from "lucide-react";
 import { useDataContext } from "../context/DataContext";
-import { useMemo, useState, useRef } from "react";
-import Customer from "./CustomerDetail";
-import { Link } from "react-router-dom";
+import { useMemo, useState, useRef,  } from "react";import { Link } from "react-router-dom";
 import currency from "../utils/Currency";
 import EmptyState from "../components/Emptystate";
 import { focusField } from "../utils/focusField";
@@ -11,9 +9,9 @@ function Customers() {
 
   const { Customers, setCustomers } = useDataContext();
 
-  const cNameRef = useRef(null);
-  const cPhoneRef = useRef(null);
-  const cAddressRef = useRef(null);
+  const cNameRef = useRef<HTMLInputElement|null>(null);
+  const cPhoneRef = useRef<HTMLInputElement|null>(null);
+  const cAddressRef = useRef<HTMLInputElement|null>(null);
 
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
@@ -38,7 +36,7 @@ function Customers() {
     setName("");
   };
 
-  function handleAddCustomer(e) {
+  function handleAddCustomer(e:React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
 
     if (!name.trim()) {

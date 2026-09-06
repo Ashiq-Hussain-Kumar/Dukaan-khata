@@ -1,11 +1,17 @@
-export function hasTransactionValidationError(transaction) {
+import type { NewTransactionInterface, Transaction } from "../types";
+type ValidationError =
+  | { type: "NO_ITEMS"; message: string }
+  | { type: "ITEM_NAME"; itemId: string; message: string }
+  | { type: "PAYMENT_AMOUNT"; message: string }
+  | { type: "UNIT_PRICE"; itemId: string; message: string };
+export function hasTransactionValidationError(transaction:Transaction |NewTransactionInterface):ValidationError|null {
   const isSaleOrReturn =
     transaction?.type === "SALE" ||
     transaction?.type === "RETURN";
 
   const isPayment = transaction?.type === "PAYMENT";
 
-  // No items at all
+  
   const noItems =
     isSaleOrReturn &&
     (transaction?.items?.length ?? 0) === 0;
@@ -17,7 +23,7 @@ export function hasTransactionValidationError(transaction) {
     };
   }
 
-  // An item exists, but name is empty
+  
   const invalidItem = isSaleOrReturn && (transaction?.items?.find(
     (item) => item?.name?.trim() === "")
   );

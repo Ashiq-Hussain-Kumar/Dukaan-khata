@@ -1,8 +1,29 @@
 import { Trash2, Plus } from "lucide-react";
 import  currency  from "../utils/Currency";
+import type { NewTransactionInterface } from "../types";
+type ItemRefs = Record<string, HTMLInputElement | null>;
 
-const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRef, addItemRef}) => {
-  const total = transaction.items.reduce(
+type SaleReturnField =
+  | "reason"
+  | "addItem"
+  | "delete"
+  | "name"
+  | "quantity"
+  | "unitPrice";
+
+interface SaleReturnSectionProps{
+  transaction:NewTransactionInterface,
+  handelSaleReturn:(id: string | null,
+    field: SaleReturnField,
+    value: string |null )=>void,
+  itemRef: React.RefObject<ItemRefs>;
+  unitPriceRef: React.RefObject<ItemRefs>;
+
+  addItemRef: React.RefObject<HTMLButtonElement | null>;
+}
+const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRef, addItemRef}:SaleReturnSectionProps) => {
+  const items = transaction.items ??[];
+  const total:number = items.reduce(
     (sum, item) => sum + Number(item.quantity) * Number(item.unitPrice),
     0
   );
@@ -39,7 +60,7 @@ const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRe
         </button>
       </div>
 
-      {transaction.items.length > 0 && (
+      {items.length > 0 && (
         <div className="grid grid-cols-12 gap-3 bg-[#F7F8FB] rounded-xl px-4 py-2.5 text-xs font-medium text-[#8A8F98]">
           <div className="col-span-4">Item Name</div>
           <div className="col-span-2 text-center">Quantity</div>
@@ -50,7 +71,7 @@ const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRe
       )}
 
       <div className="space-y-2.5">
-        {transaction.items.map((item) => (
+        {items.map((item) => (
           <div
             key={item.id}
             className="grid grid-cols-12 gap-3 items-center border border-[#EDEEF2] rounded-xl p-3 hover:border-[#4F46E5]/30 transition"
@@ -101,7 +122,7 @@ const SaleReturnSection = ({ transaction, handelSaleReturn, itemRef, unitPriceRe
           </div>
         ))}
 
-        {transaction.items.length === 0 && (
+        {items.length === 0 && (
           <p className="text-sm text-[#9AA0AA] text-center py-6">No items yet — click "Add Item" to start.</p>
         )}
       </div>

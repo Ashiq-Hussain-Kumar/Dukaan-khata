@@ -23,7 +23,7 @@ function Sales() {
   const [customFrom, setCustomFrom] = useState("")
   const [customTo, setCustomTo] = useState("");
 
-  function getFilterDate(dateFilter) {
+  function getFilterDate(dateFilter:string) {
 
     const today = new Date();
 
@@ -121,7 +121,7 @@ function Sales() {
 }
   }
 
-  const { from, to } = getFilterDate(dateFilter);
+  const { from, to } = getFilterDate(dateFilter)?? {from:null,to:null};
 
   const filteredSales = useMemo(() => {
     const search = query.trim().toLowerCase();
@@ -210,7 +210,7 @@ const averageSale =
 
         <StatCard
           label="No. of Sales"
-          value={filteredSales?.length}
+          value={String(filteredSales?.length) ?? 0}
           icon={ShoppingBag}
           tone="green"
         />

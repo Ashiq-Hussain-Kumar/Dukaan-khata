@@ -1,5 +1,20 @@
-function StatCard({label, icon:Icon, value, tone}) {
-  const tones = {
+import type { LucideIcon } from "lucide-react";
+
+interface StatCardProps {
+  icon:LucideIcon,
+  label:string,
+  value: string,
+  tone:"indigo" | "green" | "rose" 
+}
+
+interface toneInside{
+  bg:string,
+  text:string
+}
+type Tones = Record<"indigo" | "green" | "rose",toneInside>
+
+function StatCard({label, icon:Icon, value, tone}:StatCardProps) {
+  const tones:Tones = {
     indigo: { bg: "bg-[#EEF0FF]", text: "text-[#4F46E5]" },
     green: { bg: "bg-[#EBFBEF]", text: "text-[#16A34A]" },
     rose: { bg: "bg-[#FFEEF1]", text: "text-[#E11D48]" },

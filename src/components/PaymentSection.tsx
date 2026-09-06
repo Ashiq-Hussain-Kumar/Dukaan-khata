@@ -1,4 +1,23 @@
-const PaymentSection = ({ transaction, handlePayments ,paymentRef }) => {
+import type { NewTransactionInterface} from "../types";
+
+
+type PaymentField =
+  | "amount"
+  | "method"
+  | "reference"
+  | "receivedBy";
+
+
+
+interface PaymentSectionProps{
+  transaction:NewTransactionInterface,
+  handlePayments: (field:PaymentField, value:string)=>void,
+  paymentRef:React.RefObject<HTMLInputElement|null>
+
+}
+
+
+const PaymentSection = ({ transaction, handlePayments ,paymentRef }:PaymentSectionProps) => {
   return (
     <div className="space-y-5">
       <h2 className="text-sm font-semibold text-[#111827]">Payment Details</h2>

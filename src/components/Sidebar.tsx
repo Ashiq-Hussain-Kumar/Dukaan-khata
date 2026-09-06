@@ -1,7 +1,15 @@
 import { Wallet, LayoutDashboard, Users, X, Weight } from "lucide-react";
 import NavItem from "./sidebar-components/Navitem";
+import { Dispatch, SetStateAction } from "react";
 
-function Sidebar({ isSidebarOpen, setIsSidebarOpen }) {
+type SidebarProps={
+  isSidebarOpen:boolean,
+  setIsSidebarOpen:Dispatch<SetStateAction<boolean>>
+}
+
+
+
+function Sidebar({ isSidebarOpen, setIsSidebarOpen }:SidebarProps) {
   const nav = [
     {
       key: "dashboard",

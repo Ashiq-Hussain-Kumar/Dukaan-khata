@@ -1,7 +1,10 @@
 
 import { CircleAlert, X } from "lucide-react";
-
-function Snackbar({ message, onClose }) {
+interface SnackbarProps{
+ message:string,
+ onClose:()=> void
+}
+function Snackbar({ message, onClose }:SnackbarProps) {
   
 
   if (!message) return null;

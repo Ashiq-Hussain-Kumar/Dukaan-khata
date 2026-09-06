@@ -1,15 +1,28 @@
-import { Children, useState, createContext, useEffect, useContext } from "react";
+import React, { useState, createContext, useEffect, useContext } from "react";
 import { seedCustomers, seedTransactions } from "../data";
+import type { Customer, Transaction } from "../types";
 
+interface DataProviderType{
+  children:React.ReactNode
+}
+interface DataContextType{
+  Transactions:Transaction[],
+  Customers:Customer[],
+  totalSales:number,
+  totalCollected:number,
+  totalBalance:number
+  setCustomers:React.Dispatch<React.SetStateAction<Customer[]>>;
+  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>
 
+}
 const CUSTOMERS_KEY = "savedCustomers";
 const TRANSACTIONS_KEY = "savedTransactions";
-const DataContext = createContext();
+const DataContext = createContext<DataContextType|null>(null);
 
 
-export function DataProvider({ children }) {
+export function DataProvider({ children }:DataProviderType) {
  
-  const [Customers, setCustomers] = useState(() => {
+  const [Customers, setCustomers] = useState<Customer[]>(() => {
     const saved = localStorage.getItem(CUSTOMERS_KEY);
 
     return saved
@@ -17,7 +30,7 @@ export function DataProvider({ children }) {
       : seedCustomers;
   });
 
-  const [Transactions, setTransactions] = useState(() => {
+  const [Transactions, setTransactions] = useState<Transaction[]>(() => {
     const saved = localStorage.getItem(TRANSACTIONS_KEY);
 
     return saved
@@ -55,4 +68,10 @@ export function DataProvider({ children }) {
 
 }
 
-export const useDataContext = () => useContext(DataContext);
+export const useDataContext = ():DataContextType=>{
+  const context = useContext(DataContext)
+  if(context === null){
+    throw new Error("useDataContext must be used within a DataProvider");
+  }
+  return context;
+}
