@@ -54,9 +54,7 @@ function ViewTransaction() {
       String(c?.id) === String(transaction?.customerId)
   );
 
-  /* --------------------------------
-     Transaction Not Found
-  -------------------------------- */
+ 
 
   if (!transaction) {
     return (
@@ -78,7 +76,7 @@ function ViewTransaction() {
           </div>
 
           <h1 className="text-xl font-semibold text-[#111827]">
-            Transaction not found
+            {isDataLoading ? "Loading..." : "Transaction not found"}
           </h1>
 
           <p className="text-sm text-[#8A8F98] mt-1">
@@ -132,30 +130,28 @@ function ViewTransaction() {
     transaction?.amount ?? calculatedAmount
   );
 
-  /* --------------------------------
-     Handlers
-  -------------------------------- */
+ 
 
   const handleEdit = () => {
     navigate(`/EditTransaction/${transaction.id}`);
   };
 
 
-  const handleDeleteTransaction = async () => {
-    if (isBusy || !deleteTransaction.id) return;
+ const handleDeleteTransaction = async () => {
+  if (isBusy || !deleteTransaction.id) return;
 
-    setIsBusy(true);
-    try {
-      await api.delete(`/transactions/${deleteTransaction.id}`);
-      await refreshData();   // the server fixed balance and stock
-      navigate(`/customers/${transaction.customerId}`);
-    } catch (err) {
-      setDeleteTransaction({ deleteOption: false, id: null });
-      setError(err instanceof ApiRequestError ? err.message : "Could not delete the transaction");
-    } finally {
-      setIsBusy(false);
-    }
-  };
+  setIsBusy(true);
+  try {
+    await api.delete(`/transactions/${deleteTransaction.id}`);
+    await refreshData();   // the server fixed balance and stock
+    navigate(`/customers/${transaction.customerId}`);
+  } catch (err) {
+    setDeleteTransaction({ deleteOption: false, id: null });
+    setError(err instanceof ApiRequestError ? err.message : "Could not delete the transaction");
+  } finally {
+    setIsBusy(false);
+  }
+};
 
 
   const formattedDate = transaction?.date
@@ -203,6 +199,7 @@ function ViewTransaction() {
               </button>
 
               <button
+              disabled={isBusy}
                 className="
           px-4 py-2 rounded-xl
           bg-[#E11D48] text-white
@@ -216,7 +213,7 @@ function ViewTransaction() {
         "
                 onClick={handleDeleteTransaction}
               >
-                Yes, Delete
+               {isBusy ? "Deleting..." : "Yes, Delete"}
               </button>
             </div>
           </div>
@@ -997,7 +994,7 @@ function ViewTransaction() {
         </div>
 
       </div>
-
+<Snackbar message={error} onClose={() => setError("")} />
     </div>
   );
 }
