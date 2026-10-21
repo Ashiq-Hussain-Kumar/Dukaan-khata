@@ -15,8 +15,8 @@ type RequestOptions = {
   noRefresh?: boolean; 
 };
 
-// While one refresh is running, every other request waits for the same one.
-// The backend rotates refresh tokens, so two parallel refreshes would make the second fail.
+
+
 let refreshPromise: Promise<boolean> | null = null;
 
 function refreshSession(): Promise<boolean> {
@@ -55,7 +55,7 @@ async function request<T>(
 
   const json = await res.json().catch(() => null);
 
-  // Access token expired: refresh once, then repeat the same request once
+
   if (res.status === 401 && !noRefresh && !isRetry) {
     const refreshed = await refreshSession();
     if (refreshed) return request<T>(path, options, true);
@@ -68,7 +68,7 @@ async function request<T>(
     );
   }
 
-  // Every backend response looks like { statusCode, message, data, success }
+ 
   return json?.data as T;
 }
 

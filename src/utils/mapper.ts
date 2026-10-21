@@ -16,7 +16,7 @@ export type ApiTransaction = {
   items?: ApiItem[]; payment?: Transaction["payment"]; returnInfo?: Transaction["return"];
 };
 
-// "2026-10-05T00:00:00.000Z" becomes "2026-10-05" (the format your pages already use)
+
 const toDateString = (iso: string): string => {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");

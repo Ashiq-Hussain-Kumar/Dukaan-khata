@@ -32,7 +32,7 @@ export function hasTransactionValidationError(transaction:Transaction |NewTransa
     return {
       type: "ITEM_NAME",
       itemId: invalidItem.id,
-      message: "Please enter the item name.",
+      message: "Please select a product for every item.",
     };
   }
 

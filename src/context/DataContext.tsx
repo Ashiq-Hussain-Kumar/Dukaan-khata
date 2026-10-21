@@ -1,77 +1,96 @@
-import React, { useState, createContext, useEffect, useContext } from "react";
-import { seedCustomers, seedTransactions } from "../data";
-import type { Customer, Transaction } from "../types";
+import React, { useState, createContext, useEffect, useContext, useCallback } from "react";
+import type { Customer, Product, Transaction } from "../types";
+import { api } from "../utils/api";
+import { useAuthContext } from "./Authcontext";
+import { toCustomer, toProduct,toTransaction, ApiCustomer,ApiProduct,  ApiTransaction } from "../utils/mapper";
 
-interface DataProviderType{
-  children:React.ReactNode
+interface DataProviderType {
+  children: React.ReactNode;
 }
-interface DataContextType{
-  Transactions:Transaction[],
-  Customers:Customer[],
-  totalSales:number,
-  totalCollected:number,
-  totalBalance:number
-  setCustomers:React.Dispatch<React.SetStateAction<Customer[]>>;
-  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>
 
+interface DataContextType {
+  Transactions: Transaction[];
+  Customers: Customer[];
+  Products: Product[];
+  totalSales: number;
+  totalCollected: number;
+  totalBalance: number;
+  isDataLoading: boolean;
+  dataError: string;
+  refreshData: () => Promise<void>;
+  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
+  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
 }
-const CUSTOMERS_KEY = "savedCustomers";
-const TRANSACTIONS_KEY = "savedTransactions";
-const DataContext = createContext<DataContextType|null>(null);
 
+const DataContext = createContext<DataContextType | null>(null);
 
-export function DataProvider({ children }:DataProviderType) {
+export function DataProvider({ children }: DataProviderType) {
+  const { isAuthenticated } = useAuthContext();
+
+  const [Customers, setCustomers] = useState<Customer[]>([]);
+  const [Products, setProducts] = useState<Product[]>([]);
+  const [Transactions, setTransactions] = useState<Transaction[]>([]);
+  const [isDataLoading, setIsDataLoading] = useState(false);
+  const [dataError, setDataError] = useState("");
  
-  const [Customers, setCustomers] = useState<Customer[]>(() => {
-    const saved = localStorage.getItem(CUSTOMERS_KEY);
-
-    return saved
-      ? JSON.parse(saved)
-      : seedCustomers;
-  });
-
-  const [Transactions, setTransactions] = useState<Transaction[]>(() => {
-    const saved = localStorage.getItem(TRANSACTIONS_KEY);
-
-    return saved
-      ? JSON.parse(saved)
-      : seedTransactions;
-  });
+  const refreshData = useCallback(async () => {
+    setIsDataLoading(true);
+    setDataError("");
+    try {
+      // three requests at the same time
+      const [customersRes, productsRes, transactionsRes] = await Promise.all([
+        api.get<{ customers: ApiCustomer[] }>("/customers/get-customers"),
+        api.get<{ products: ApiProduct[] }>("/products/get-products"),
+        api.get<{ transactions: ApiTransaction[] }>("/transactions"),
+      ]);
+       
 
 
-  // Save customers whenever they change
+      setCustomers(customersRes.customers.map(toCustomer));
+      setProducts(productsRes.products.map(toProduct));
+      // The backend sends newest first, but your pages assume oldest first
+      // (Dashboard does reverse().slice(0, 6)). We fix the pages later (step 13).
+      setTransactions(transactionsRes.transactions.map(toTransaction).reverse());
+    } catch (error) {
+      setDataError(error instanceof Error ? error.message : "Could not load data");
+    } finally {
+      setIsDataLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    localStorage.setItem(
-      CUSTOMERS_KEY,
-      JSON.stringify(Customers)
-    );
-  }, [Customers]);
+    if (isAuthenticated) {
+      refreshData();
+    } else {
+      // logged out: forget everything
+      setCustomers([]);
+      setProducts([]);
+      setTransactions([]);
+    }
+  }, [isAuthenticated, refreshData]);
 
-
-  // Save transactions whenever they change
-  useEffect(() => {
-    localStorage.setItem(
-      TRANSACTIONS_KEY,
-      JSON.stringify(Transactions)
-    );
-  }, [Transactions]);
-
-  const totalSales = Transactions?.filter((t) => t?.type === "SALE")?.reduce((sum, t) => sum + t.amount, 0);
-  const totalCollected = Transactions?.filter(t => t?.type === "PAYMENT")?.reduce((sum, t) => sum + t?.amount, 0);
-  const totalBalance = Customers?.reduce((sum, c) => sum += c.balance, 0);
+  const totalSales = Transactions.filter((t) => t.type === "SALE").reduce((sum, t) => sum + t.amount, 0);
+  const totalCollected = Transactions.filter((t) => t.type === "PAYMENT").reduce((sum, t) => sum + t.amount, 0);
+  const totalBalance = Customers.reduce((sum, c) => sum + c.balance, 0);
 
   return (
-    <DataContext.Provider value={{ Transactions, Customers, totalSales, totalCollected, totalBalance, setCustomers, setTransactions }}>
+    <DataContext.Provider
+      value={{
+        Transactions, Customers, Products,
+        totalSales, totalCollected, totalBalance,
+        isDataLoading, dataError, refreshData,
+        setCustomers, setTransactions,
+      }}
+    >
       {children}
     </DataContext.Provider>
-  )
-
+  );
 }
 
-export const useDataContext = ():DataContextType=>{
-  const context = useContext(DataContext)
-  if(context === null){
+export const useDataContext = (): DataContextType => {
+  const context = useContext(DataContext);
+  if (context === null) {
     throw new Error("useDataContext must be used within a DataProvider");
   }
   return context;
-}
+};

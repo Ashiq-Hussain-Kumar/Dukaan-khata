@@ -21,7 +21,7 @@ function Products() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [category, setCategory] = useState("");
-  const [price, setPrice] = useState("");   // inputs hold text, we convert on submit
+  const [price, setPrice] = useState("");  
   const [stock, setStock] = useState("");
   const [unit, setUnit] = useState("piece");
   const [query, setQuery] = useState("");
@@ -80,7 +80,7 @@ function Products() {
       return;
     }
 
-    // The backend only accepts real numbers for price and stock
+   
     const body = {
       name: name.trim(),
       category: category.trim(),
@@ -100,7 +100,7 @@ function Products() {
       clearForm();
       setShowForm(false);
     } catch (err) {
-      // the form stays open so the user can fix it
+      
       setError(err instanceof ApiRequestError ? err.message : "Could not save the product");
     } finally {
       setIsSaving(false);

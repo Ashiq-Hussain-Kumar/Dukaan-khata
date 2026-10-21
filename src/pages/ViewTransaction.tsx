@@ -11,6 +11,8 @@ import {
   FileText,
 } from "lucide-react";
 import { useDataContext } from "../context/DataContext";
+import { api, ApiRequestError } from "../utils/api";
+import Snackbar from "../components/SnackBar";
 
 
 const typeStyles = {
@@ -21,16 +23,18 @@ const typeStyles = {
 
 
 function ViewTransaction() {
-  const { Customers, Transactions, setCustomers, setTransactions } = useDataContext();
+  const { Customers, Transactions, isDataLoading, refreshData } = useDataContext();
   const navigate = useNavigate();
   const { id } = useParams();
   const [deleteTransaction, setDeleteTransaction] = useState<{
     deleteOption: boolean;
-    id: string | undefined |null;
+    id: string | undefined | null;
   }>({
     deleteOption: false,
     id: null,
   });
+  const [isBusy, setIsBusy] = useState(false);
+  const [error, setError] = useState("");
 
 
   /* --------------------------------
@@ -137,24 +141,22 @@ function ViewTransaction() {
   };
 
 
-  function handleDeleteTransaction() {
-    const t = Transactions.find((tr) => tr.id === deleteTransaction.id);
-    const cust = Customers.find((c) => c.id === t?.customerId);
+  const handleDeleteTransaction = async () => {
+    if (isBusy || !deleteTransaction.id) return;
 
-    if (t?.type === "SALE") {
-      setCustomers((prev) => prev.map((c) => (c?.id === cust?.id ? { ...c, balance: cust.balance - t.amount } : c)));
-    } else if (t?.type === "PAYMENT" || t?.type === "RETURN") {
-      setCustomers((prev) => prev.map((c) => (c?.id === cust?.id ? { ...c, balance: cust.balance + t.amount } : c)));
+    setIsBusy(true);
+    try {
+      await api.delete(`/transactions/${deleteTransaction.id}`);
+      await refreshData();   // the server fixed balance and stock
+      navigate(`/customers/${transaction.customerId}`);
+    } catch (err) {
+      setDeleteTransaction({ deleteOption: false, id: null });
+      setError(err instanceof ApiRequestError ? err.message : "Could not delete the transaction");
+    } finally {
+      setIsBusy(false);
     }
+  };
 
-    setTransactions((prev) => prev.filter((tr) => tr.id !== deleteTransaction.id));
-    setDeleteTransaction({ deleteOption: false, id: null });
-    navigate(`/customers/${customer?.id}`);
-  }
-
-  /* --------------------------------
-     Format Date
-  -------------------------------- */
 
   const formattedDate = transaction?.date
     ? new Date(
@@ -251,12 +253,7 @@ function ViewTransaction() {
             ? `Back to ${customer.name}`
             : "Back to Transactions"}
         </Link>
-
-
-        {/* ==============================
-            PAGE HEADER
-        ============================== */}
-
+        {/* {page header} */}
         <div className="
           flex flex-col
           sm:flex-row

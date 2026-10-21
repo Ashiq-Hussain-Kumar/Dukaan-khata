@@ -3,10 +3,11 @@ import { Pencil, Trash2, Phone, MapPin, ArrowDownLeft, ShoppingBag, RotateCcw, E
 import currency from "../utils/Currency";
 import EmptyState from "../components/Emptystate";
 import { useDataContext } from "../context/DataContext";
-import React, { useRef, useState, useEffect,} from "react";
+import React, { useRef, useState, useEffect, } from "react";
 import { getRunningBalances } from "../utils/getRunningBalances";
 import { focusField } from "../utils/focusField";
-import type { Customer } from "../types";
+import { api, ApiRequestError } from "../utils/api";
+import Snackbar from "../components/SnackBar";
 
 type Mode = "View" | "Edit" | "Delete";
 
@@ -17,10 +18,11 @@ type DeleteTransaction = {
 
 
 function Customer() {
-  const { id } = useParams<{id:string|undefined}>();
-  const { Customers, Transactions, setCustomers, setTransactions } = useDataContext();
+  const { id } = useParams<{ id: string | undefined }>();
+  const { Customers, Transactions, refreshData, isDataLoading } = useDataContext();
   const navigate = useNavigate();
   const customer = Customers.find((c) => c.id === id);
+  const hasTransactions = Transactions.some((t) => t.customerId === id);
 
   const cNameRef = useRef(null);
   const cPhoneRef = useRef(null);
@@ -31,9 +33,11 @@ function Customer() {
   const [deleteError, setDeleteError] = useState("");
   const [editedName, setEditedName] = useState(customer?.name ?? "");
   const [editedPhone, setEditedPhone] = useState(customer?.phone ?? "");
-  const [editedAddress, setEditedAddress] = useState(customer?.address ??"");
+  const [editedAddress, setEditedAddress] = useState(customer?.address ?? "");
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [deleteTransaction, setDeleteTransaction] = useState<DeleteTransaction>({ deleteOption: false, id: null });
+  const [isBusy, setIsBusy] = useState(false);
+  const [error, setError] = useState("");
 
 
   useEffect(() => {
@@ -41,64 +45,79 @@ function Customer() {
     setEditedPhone(customer?.phone ?? "");
     setEditedAddress(customer?.address ?? "");
   }, [customer?.id]);
-
-
-
-
-  function handleEditCustomer(e:React.SubmitEvent<HTMLFormElement>) {
+  async function handleEditCustomer(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (isBusy) return;
 
     if (!editedName.trim()) {
       focusField(cNameRef);
-      return
+      return;
     }
     if (!editedAddress.trim()) {
       focusField(cAddressRef);
-      return
+      return;
     }
     if (!editedPhone.trim()) {
       focusField(cPhoneRef);
-      return
+      return;
     }
 
-
-    setCustomers((prev:Customer[]) => prev.map((c) => (c?.id === id ? { ...c, name: editedName, phone: editedPhone, address: editedAddress } : c)))
-    setMode("View");
-
+    setIsBusy(true);
+    try {
+      await api.patch(`/customers/${id}`, {
+        name: editedName.trim(),
+        address: editedAddress.trim(),
+        phone: editedPhone.trim(),
+      });
+      await refreshData();
+      setMode("View");
+    } catch (err) {
+      // the form stays open so the user can fix it
+      setError(err instanceof ApiRequestError ? err.message : "Could not update the customer");
+    } finally {
+      setIsBusy(false);
+    }
   }
 
   function handleDeleteCustomerError() {
     setDeleteError(
-      customer?.balance !== 0
-        ? "A customer with a non-zero balance cannot be deleted."
+      hasTransactions
+        ? "This customer has transactions. Delete their transactions first, then delete the customer."
         : ""
     );
     setMode(mode === "Delete" ? "View" : "Delete");
   }
 
-
-  function handleDeleteCustomer(e:React.MouseEvent<HTMLButtonElement>) {
+  async function handleDeleteCustomer(e: React.MouseEvent<HTMLButtonElement>) {
     e.preventDefault();
-    if (customer?.balance !== 0) {
-      return;
+    if (isBusy) return;
+
+    setIsBusy(true);
+    try {
+      await api.delete(`/customers/${id}`);
+      await refreshData();
+      navigate("/customers");
+    } catch (err) {
+      setDeleteError(err instanceof ApiRequestError ? err.message : "Could not delete the customer");
+    } finally {
+      setIsBusy(false);
     }
-    setCustomers((prev) => prev.filter((c) => c?.id !== id));
-    setTransactions((prev) => prev.filter((t) => t?.customerId !== customer?.id))
-    navigate("/customers");
   }
 
-  function handleDeleteTransaction() {
-    const t = Transactions.find((tr) => tr.id === deleteTransaction.id);
-    const cust = Customers.find((c) => c.id === t?.customerId);
+  async function handleDeleteTransaction() {
+    if (isBusy || !deleteTransaction.id) return;
 
-    if (t?.type === "SALE") {
-      setCustomers((prev) => prev.map((c) => (c?.id === cust?.id ? { ...c, balance: cust.balance - t.amount } : c)));
-    } else if (t?.type === "PAYMENT" || t?.type === "RETURN") {
-      setCustomers((prev) => prev.map((c) => (c?.id === cust?.id ? { ...c, balance: cust.balance + t.amount } : c)));
+    setIsBusy(true);
+    try {
+      await api.delete(`/transactions/${deleteTransaction.id}`);
+      // balance and stock were fixed by the backend, so just reload
+      await refreshData();
+    } catch (err) {
+      setError(err instanceof ApiRequestError ? err.message : "Could not delete the transaction");
+    } finally {
+      setDeleteTransaction({ deleteOption: false, id: null });
+      setIsBusy(false);
     }
-
-    setTransactions((prev) => prev.filter((tr) => tr.id !== deleteTransaction.id));
-    setDeleteTransaction({ deleteOption: false, id: null });
   }
 
 
@@ -108,7 +127,9 @@ function Customer() {
 
 
 
-  if (!customer) return <EmptyState text={"Customer not found"}></EmptyState>;
+  if (!customer) {
+    return <EmptyState text={isDataLoading ? "Loading..." : "Customer not found"} />;
+  }
 
   return (
     <div>
@@ -157,7 +178,7 @@ function Customer() {
         "
                 onClick={handleDeleteTransaction}
               >
-                Yes, Delete
+               {isBusy ? "Deleting..." : "Yes, Delete"}
               </button>
             </div>
           </div>
@@ -182,13 +203,23 @@ function Customer() {
             />
             <input value={editedPhone} ref={cPhoneRef} onChange={(e) => setEditedPhone(e.target.value)} placeholder="Phone Number" type="tel" className="flex-1 bg-[#F7F8FB] border border-[#E5E7EB] rounded-xl px-3.5 py-2.5 text-sm text-[#111827] placeholder-[#9AA0AA] outline-none focus:border-[#4F46E5] focus:ring-2 focus:ring-[#4F46E5]/15 transition"
             />
-            <button type="submit" className="bg-[#1c1f26] text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-[#313b49] transition cursor-pointer"> Save</button>
+           <button type="submit" disabled={isBusy} className="bg-[#1c1f26] text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-[#313b49] transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
+  {isBusy ? "Saving..." : "Save"}
+</button>
           </form>) :
             (<div>
               {deleteError !== "" ? (<p className="text-m text-black">{deleteError}</p>) :
                 <p className="text-m text-black">Are you sure you want to delete {customer?.name}? This can't be undone.</p>}
               <div className="flex gap-2.5 mt-1.5">
-                {customer?.balance === 0 && (<button className="bg-[#E11D48] text-white text-sm font-medium px-4 py-2 rounded-xl cursor-pointer" onClick={handleDeleteCustomer}>Yes, Delete</button>)}
+                {deleteError === "" && (
+                  <button
+                    disabled={isBusy}
+                    className="bg-[#E11D48] text-white text-sm font-medium px-4 py-2 rounded-xl cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                    onClick={handleDeleteCustomer}
+                  >
+                    {isBusy ? "Deleting..." : "Yes, Delete"}
+                  </button>
+                )}
                 <button className="bg-[#F7F8FB] text-[#111827] text-sm font-medium px-4 py-2 rounded-xl cursor-pointer" onClick={() => setMode(mode === "Delete" ? "View" : "Delete")}>Cancel</button>
               </div>
             </div>)}
@@ -206,10 +237,10 @@ function Customer() {
 
           <p
             className={`text-xl  font-bold ${Number(customer?.balance) > 0
-                ? "text-[#E11D48]"
-                : Number(customer?.balance) < 0
-                  ? "text-[#16A34A]"
-                  : "text-[#111827]"
+              ? "text-[#E11D48]"
+              : Number(customer?.balance) < 0
+                ? "text-[#16A34A]"
+                : "text-[#111827]"
               }`}
           >
             ₹{Number(customer?.balance ?? 0).toLocaleString("en-IN")}
@@ -385,6 +416,7 @@ function Customer() {
 
         {CustomerHistory.length === 0 && <EmptyState text="No transactions yet for this customer." />}
       </div>
+      <Snackbar message={error} onClose={() => setError("")} />
     </div>
   );
 }

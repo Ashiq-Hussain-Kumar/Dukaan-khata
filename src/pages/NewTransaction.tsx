@@ -7,17 +7,10 @@ import { ArrowLeft } from "lucide-react";
 import { focusField } from "../utils/focusField";
 import  {hasTransactionValidationError}  from "../utils/TransactionValidationError";
 import Snackbar from "../components/SnackBar";
-import { NewTransactionInterface, Transaction } from "../types";
-
-
-type ItemRefs = Record<string, HTMLInputElement | null>;
-type SaleReturnField =
-  | "reason"
-  | "addItem"
-  | "delete"
-  | "name"
-  | "quantity"
-  | "unitPrice";
+import type { NewTransactionInterface, TransactionsItem } from "../types";
+import { api, ApiRequestError } from "../utils/api";
+type ItemRefs = Record<string, HTMLSelectElement | null>;
+type SaleReturnField = "reason" | "addItem" | "delete" | "product" | "quantity";
 type PaymentField =
   | "amount"
   | "method"
@@ -41,11 +34,24 @@ type TopLevelField =
   );
 }
 
+const todayString = () => {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
+const emptyItem = (id: string): TransactionsItem => ({
+  id,
+  productId: "",
+  name: "",
+  quantity: 1,
+  unitPrice: 0,
+});
+
 function NewTransaction() {
   const { id, type } = useParams();
   const navigate = useNavigate();
-  const { Customers, setCustomers, setTransactions } = useDataContext();
-
+  const { Customers, Products, refreshData } = useDataContext();
   const customer = Customers.find((c) => String(c?.id) === String(id));
   
   const upperType   = type?.toUpperCase() as TransactionType; 
@@ -54,17 +60,18 @@ function NewTransaction() {
 
 
   const [newTransaction, setNewTransaction] = useState<NewTransactionInterface>({
-    id: "t-" + crypto.randomUUID(),
-    customerId: id,
-    customerName: customer?.name ?? "",
-    date: "",
-    type: upperType,
-    amount:0,
-    note: "",
-    items: [{ id: crypto.randomUUID(), name: "", quantity: 1, unitPrice: 0 }]  ,
-    payment: null,
-    return: null,
-  });
+  id: "t-" + crypto.randomUUID(),
+  customerId: id,
+  customerName: customer?.name ?? "",
+  date: todayString(),
+  type: upperType,
+  amount: 0,
+  note: "",
+  items: upperType === "PAYMENT" ? [] : [emptyItem(crypto.randomUUID())],
+  payment: upperType === "PAYMENT" ? { method: "Cash", reference: "", receivedBy: "" } : null,
+  return: upperType === "RETURN" ? { reason: "Damaged" } : null,
+});
+const [isSaving, setIsSaving] = useState(false);
 
   const [snackbar, setSnackbar] = useState("");
   const typeStyles = {
@@ -77,7 +84,6 @@ function NewTransaction() {
   const dateRef = useRef<HTMLInputElement | null>(null);
   const paymentRef = useRef<HTMLInputElement | null>(null);
   const itemRef = useRef<ItemRefs>({});
-  const unitPriceRef = useRef<ItemRefs>({});
   const addItemRef = useRef<HTMLButtonElement | null>(null);
   const snackbarTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -145,141 +151,132 @@ function showSnackbar(message:string) {
     setNewTransaction((prev) => ({ ...prev, [field]: value }));
   }
 
-  function handleSubmit(e:React.SubmitEvent<HTMLFormElement>) {
-    e.preventDefault();
+ async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+  e.preventDefault();
+  if (isSaving) return;
 
-   const error = hasTransactionValidationError(newTransaction);
-
-   if (!newTransaction?.customerId) {
-  showSnackbar("Please select a customer.");
-  focusField(customerRef);
-  return;
-}
-
-if (!newTransaction?.date) {
-  showSnackbar("Please select a date.");
-  focusField(dateRef);
-  return;
-}
-
-if (error) {
-  showSnackbar(error.message);
-
-  if (error.type === "NO_ITEMS") {
-    focusField(addItemRef);
+  if (!newTransaction.customerId) {
+    showSnackbar("Please select a customer.");
+    focusField(customerRef);
     return;
   }
 
-  if (error.type === "ITEM_NAME") {
-    itemRef.current[error?.itemId]?.scrollIntoView();
-    itemRef.current[error.itemId]?.focus();
+  if (!newTransaction.date) {
+    showSnackbar("Please select a date.");
+    focusField(dateRef);
     return;
   }
 
-  if (error.type === "PAYMENT_AMOUNT") {
-    focusField(paymentRef);
+  const error = hasTransactionValidationError(newTransaction);
+  if (error) {
+    showSnackbar(error.message);
+    if (error.type === "NO_ITEMS") focusField(addItemRef);
+    if (error.type === "ITEM_NAME") {
+      itemRef.current[error.itemId]?.scrollIntoView();
+      itemRef.current[error.itemId]?.focus();
+    }
+    if (error.type === "PAYMENT_AMOUNT") focusField(paymentRef);
     return;
   }
 
-  if (error.type === "UNIT_PRICE") {
-    unitPriceRef.current[error?.itemId]?.scrollIntoView();
-    unitPriceRef.current[error?.itemId]?.focus();
-    return;
-  }
-}
-
-
-
-
-    const oldBalance =
-      Customers.find(
-        (c) => String(c?.id) === String(newTransaction?.customerId)
-      )?.balance ?? 0;
-
-    const finalAmount =
-      newTransaction?.type === "PAYMENT"
-        ? Number(newTransaction?.amount)
-        : newTransaction?.items.reduce(
-          (sum, item) =>
-            sum +
-            Number(item?.quantity) * Number(item?.unitPrice),
-          0
-        );
-
-    let newBalance;
-
-    if (newTransaction?.type === "SALE") {
-      newBalance = oldBalance + finalAmount;
-    } else {
-      newBalance = oldBalance - finalAmount;
+  if (upperType === "PAYMENT") {
+    if (!newTransaction.payment?.receivedBy.trim()) {
+      showSnackbar("Please enter who received the payment.");
+      return;
+    }
+  } else {
+    // Total quantity wanted per product (the same product can be on two rows)
+    const wanted = new Map<string, number>();
+    for (const item of newTransaction.items) {
+      if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+        showSnackbar("Enter a quantity greater than 0.");
+        return;
+      }
+      const key = item.productId ?? "";
+      wanted.set(key, (wanted.get(key) ?? 0) + item.quantity);
     }
 
-    setCustomers((prev) =>
-      prev.map((c) => {
-        if (
-          String(c?.id) !== String(newTransaction?.customerId)
-        ) {
-          return c;
+    if (upperType === "SALE") {
+      for (const [productId, qty] of wanted) {
+        const p = Products.find((x) => x.id === productId);
+        if (p && qty > p.stock) {
+          showSnackbar(`Only ${p.stock} ${p.unit} of ${p.name} in stock.`);
+          return;
         }
-
-        return {
-          ...c,
-          balance: newBalance,
-        };
-      })
-    );
-
-    const selectedCustomer = Customers.find(
-      (c) => String(c?.id) === String(newTransaction?.customerId)
-    );
-    if (!newTransaction.customerId) {
-  return;
-}
-    const finalTransaction:Transaction = {
-      ...newTransaction,
-      customerId:newTransaction.customerId,
-      customerName: selectedCustomer?.name ?? "",
-      amount: finalAmount,
-      type:upperType,
-      items:
-        newTransaction?.type === "PAYMENT"
-          ? []
-          : (newTransaction?.items ?? []),
-    };
-
-   if(finalTransaction.type === undefined) return;
-
-
-    setTransactions((prev) => [
-      ...prev,
-      finalTransaction,
-    ]);
-
-    navigate(-1);
-  }
-  function handelSaleReturn(id:string | null,  field :SaleReturnField, value :string|null ) {
-    if (field === "addItem") {
-      if(id === null || newTransaction.items === null) return;
-      setNewTransaction((prev) => ({
-        ...prev,
-        items: [...prev.items, { id, name: "", quantity: 1, unitPrice: 0 }],
-      }));
-    } else if (field === "reason") {
-      if(typeof(value) === "number" && value === null) return;
-      setNewTransaction((prev) => ({ ...prev, return: { reason: value } }));
-    } else if (field === "delete") {
-      setNewTransaction((prev) => ({
-        ...prev,
-        items: prev.items.filter((it) => it?.id !== id),
-      }));
-    } else {
-
-      setNewTransaction((prev) => ({
-        ...prev,
-        items: prev.items.map((i) => (i?.id === id ? { ...i, [field]: value, } : i)),
-      }));
+      }
     }
   }
+
+  // The server computes prices and amounts. We send ids and quantities only.
+  const body =
+    upperType === "PAYMENT"
+      ? {
+          customerId: newTransaction.customerId,
+          type: upperType,
+          date: newTransaction.date,
+          note: newTransaction.note.trim(),
+          amount: Number(newTransaction.amount),
+          payment: {
+            method: newTransaction.payment?.method,
+            reference: newTransaction.payment?.reference.trim() || undefined,
+            receivedBy: newTransaction.payment?.receivedBy.trim(),
+          },
+        }
+      : {
+          customerId: newTransaction.customerId,
+          type: upperType,
+          date: newTransaction.date,
+          note: newTransaction.note.trim(),
+          items: newTransaction.items.map((i) => ({
+            productId: i.productId,
+            quantity: Number(i.quantity),
+          })),
+          ...(upperType === "RETURN"
+            ? { returnInfo: { reason: newTransaction.return?.reason } }
+            : {}),
+        };
+
+  setIsSaving(true);
+  try {
+    await api.post("/transactions", body);
+    await refreshData();   // balances and stock changed on the server
+    navigate(-1);
+  } catch (err) {
+    showSnackbar(err instanceof ApiRequestError ? err.message : "Could not save the transaction");
+  } finally {
+    setIsSaving(false);
+  }
+}
+ function handelSaleReturn(rowId: string | null, field: SaleReturnField, value: string | null) {
+  if (field === "addItem") {
+    if (rowId === null) return;
+    setNewTransaction((prev) => ({ ...prev, items: [...prev.items, emptyItem(rowId)] }));
+  } else if (field === "reason") {
+    if (value === null) return;
+    setNewTransaction((prev) => ({ ...prev, return: { reason: value } }));
+  } else if (field === "delete") {
+    setNewTransaction((prev) => ({
+      ...prev,
+      items: prev.items.filter((it) => it.id !== rowId),
+    }));
+  } else if (field === "product") {
+    // picking a product fills in its name and price
+    const product = Products.find((p) => p.id === value);
+    setNewTransaction((prev) => ({
+      ...prev,
+      items: prev.items.map((i) =>
+        i.id === rowId
+          ? { ...i, productId: product?.id ?? "", name: product?.name ?? "", unitPrice: product?.price ?? 0 }
+          : i
+      ),
+    }));
+  } else if (field === "quantity") {
+    setNewTransaction((prev) => ({
+      ...prev,
+      items: prev.items.map((i) => (i.id === rowId ? { ...i, quantity: Number(value) } : i)),
+    }));
+  }
+}
  function handlePayments(
     field: PaymentField,
     value: string
@@ -535,10 +532,11 @@ if (error) {
               />
             ) : (
               <SaleReturnSection
-                transaction={newTransaction}
-                handelSaleReturn={handelSaleReturn}
-                itemRef={itemRef} unitPriceRef={unitPriceRef} addItemRef={addItemRef}
-              />
+  transaction={newTransaction}
+  handelSaleReturn={handelSaleReturn}
+  itemRef={itemRef}
+  addItemRef={addItemRef}
+/>
             )}
           </div>
 

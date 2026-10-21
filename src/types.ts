@@ -7,11 +7,22 @@ export interface Customer{
 }
   
 
-interface TransactionsItem{
-  id:string,
-  name:string,
-  quantity:number,
-  unitPrice:number,
+export interface TransactionsItem {
+  id: string,          // row key used by the forms
+  productId?: string,  // the real product id from the backend
+  name: string,
+  quantity: number,
+  unitPrice: number,
+  total?: number,
+}
+
+export interface Product {
+  id: string,
+  name: string,
+  category?: string,
+  price: number,
+  stock: number,
+  unit: string,
 }
 
 interface Payment {

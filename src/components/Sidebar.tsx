@@ -1,6 +1,9 @@
-import { Wallet, LayoutDashboard, Users, X, Weight } from "lucide-react";
+import { Wallet, LayoutDashboard, Users, X, Weight, LogOut, Package } from "lucide-react";
 import NavItem from "./sidebar-components/Navitem";
 import { Dispatch, SetStateAction } from "react";
+import { useAuthContext } from "../context/Authcontext";
+import { useNavigate } from "react-router-dom";
+import { api } from "../utils/api";
 
 type SidebarProps={
   isSidebarOpen:boolean,
@@ -14,7 +17,7 @@ function Sidebar({ isSidebarOpen, setIsSidebarOpen }:SidebarProps) {
     {
       key: "dashboard",
       label: "Dashboard",
-      path: "/",
+      path: "/dashboard",
       icon: LayoutDashboard,
     },
     {
@@ -29,8 +32,28 @@ function Sidebar({ isSidebarOpen, setIsSidebarOpen }:SidebarProps) {
       path: "/sales",
       icon: Weight,
     },
+    {
+  key: "products",
+  label: "Products",
+  path: "/products",
+  icon: Package,
+},
   ];
 
+  const navigate = useNavigate();
+const { logout } = useAuthContext();
+
+const handleLogout = async () => {
+  try {
+    await api.post("/shopkeepers/logout");
+  } catch (error) {
+    console.error("Logout request failed:", error);
+  } finally {
+    logout();
+    navigate("/login", { replace: true });
+  }
+};
+   
   return (
     <aside
       className={`
@@ -59,7 +82,7 @@ function Sidebar({ isSidebarOpen, setIsSidebarOpen }:SidebarProps) {
           className="text-[#111827] font-semibold text-[17px] sm:font-light tracking-tight"
           style={{ fontFamily: "'Space Grotesk', sans-serif" }}
         >
-          Dukaan Khati
+          Dukaan Khata
         </span>
 
         <button
@@ -95,6 +118,24 @@ function Sidebar({ isSidebarOpen, setIsSidebarOpen }:SidebarProps) {
           />
         ))}
       </nav>
+      <button
+  type="button"
+  onClick={handleLogout}
+  className="
+    mt-auto flex w-full items-center gap-3
+    rounded-xl border border-[#EDEEF2]
+    px-4 py-3
+    text-sm font-medium text-black-600
+    transition-all duration-200
+   bg-
+    hover:border-red-200 hover:bg-red-600 hover:text-white
+    active:scale-[0.98]
+    cursor-pointer
+  "
+>
+  <LogOut size={19} strokeWidth={2} />
+  <span>Logout</span>
+</button>
     </aside>
   );
 }

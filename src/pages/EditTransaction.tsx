@@ -9,16 +9,10 @@ import { focusField } from "../utils/focusField";
 import { hasTransactionValidationError } from "../utils/TransactionValidationError";
 import Snackbar from "../components/SnackBar";
 import type { Transaction, Customer } from "../types";
+import { api, ApiRequestError } from "../utils/api";
 
-type ItemRefs = Record<string, HTMLInputElement | null>;
-
-type SaleReturnField =
-  | "reason"
-  | "addItem"
-  | "delete"
-  | "name"
-  | "quantity"
-  | "unitPrice";
+type ItemRefs = Record<string, HTMLSelectElement | null>;
+type SaleReturnField = "reason" | "addItem" | "delete" | "product" | "quantity";
 
 type PaymentField =
   | "amount"
@@ -42,11 +36,7 @@ function EditTransactionForm({
 }: EditTransactionFormProps) {
   const navigate = useNavigate();
 
-  const {
-    Customers,
-    setCustomers,
-    setTransactions,
-  } = useDataContext();
+  const { Customers, Products, refreshData } = useDataContext();
 
   const [editedTransaction, setEditedTransaction] =
     useState<Transaction>({
@@ -55,6 +45,7 @@ function EditTransactionForm({
     });
 
   const [snackbar, setSnackbar] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const customerRef =
     useRef<HTMLSelectElement | null>(null);
@@ -66,9 +57,6 @@ function EditTransactionForm({
     useRef<HTMLInputElement | null>(null);
 
   const itemRef =
-    useRef<ItemRefs>({});
-
-  const unitPriceRef =
     useRef<ItemRefs>({});
 
   const addItemRef =
@@ -89,99 +77,64 @@ function EditTransactionForm({
     }, 3000);
   }
 
-  function handelSaleReturn(
-    id: string | null,
-    field: SaleReturnField,
-    value: string |null
-  ) {
-    // ADD ITEM
-    if (field === "addItem") {
-      if (id === null) return;
+  function handelSaleReturn(rowId: string | null, field: SaleReturnField, value: string | null) {
+  if (field === "addItem") {
+    if (rowId === null) return;
+    setEditedTransaction((prev) => ({
+      ...prev,
+      items: [...(prev.items ?? []), { id: rowId, productId: "", name: "", quantity: 1, unitPrice: 0 }],
+    }));
+    return;
+  }
 
-      setEditedTransaction((prev) => ({
-        ...prev,
-        items: [
-          ...(prev.items ?? []),
-          {
-            id,
-            name: "",
-            quantity: 1,
-            unitPrice: 0,
-            total: 0,
-          },
-        ],
-      }));
+  if (field === "reason") {
+    if (value === null) return;
+    setEditedTransaction((prev) => ({ ...prev, return: { reason: value } }));
+    return;
+  }
 
-      return;
-    }
+  if (field === "delete") {
+    if (rowId === null) return;
+    setEditedTransaction((prev) => ({
+      ...prev,
+      items: (prev.items ?? []).filter((item) => item.id !== rowId),
+    }));
+    return;
+  }
 
-    // RETURN REASON
-    if (field === "reason") {
-      if (value === null ) return;
+  if (rowId === null || value === null) return;
 
-      setEditedTransaction((prev) => ({
-        ...prev,
-        return: {
-          reason: value,
-        },
-      }));
-
-      return;
-    }
-
-    // DELETE ITEM
-    if (field === "delete") {
-      if (id === null) return;
-
-      setEditedTransaction((prev) => ({
-        ...prev,
-        items: (prev.items ?? []).filter(
-          (item) => item.id !== id
-        ),
-      }));
-
-      return;
-    }
-
-    // OTHER ITEM FIELDS
-    if (id === null || value === null) {
-      return;
-    } else{
-      
-    }
+  if (field === "product") {
+    const product = Products.find((p) => p.id === value);
+    // A product that was already in this transaction keeps its old price.
+    // The server does the same, so the screen matches what will be saved.
+    const original = (transaction.items ?? []).find((i) => i.productId === value);
 
     setEditedTransaction((prev) => ({
       ...prev,
-      items: (prev.items ?? []).map((item) => {
-        if (item.id !== id) {
-          return item;
-        }
+      items: (prev.items ?? []).map((item) =>
+        item.id === rowId
+          ? {
+              ...item,
+              productId: product?.id ?? "",
+              name: product?.name ?? "",
+              unitPrice: original?.unitPrice ?? product?.price ?? 0,
+            }
+          : item
+      ),
+    }));
+    return;
+  }
 
-        if (field === "name" && typeof(value) !== "number") {
-          return {
-            ...item,
-            name: value,
-          };
-        }
-
-        if (field === "quantity") {
-          return {
-            ...item,
-            quantity: Number(value),
-          };
-        }
-
-        if (field === "unitPrice") {
-          return {
-            ...item,
-            unitPrice: Number(value),
-          };
-        }
-
-        return item;
-      }),
+  if (field === "quantity") {
+    setEditedTransaction((prev) => ({
+      ...prev,
+      items: (prev.items ?? []).map((item) =>
+        item.id === rowId ? { ...item, quantity: Number(value) } : item
+      ),
     }));
   }
+}
 
   function handlePayments(
     field: PaymentField,
@@ -288,156 +241,106 @@ function EditTransactionForm({
     }
   }
 
-  function handleSubmit(
-    e: React.SubmitEvent<HTMLFormElement>
-  ) {
-    e.preventDefault();
+  async function handleSubmit(e: React.SubmitEvent<HTMLFormElement>) {
+  e.preventDefault();
+  if (isSaving) return;
 
-    const error =
-      hasTransactionValidationError(
-        editedTransaction
-      );
-
-    if (!editedTransaction.customerId) {
-      showSnackbar("Please select a customer.");
-      focusField(customerRef);
-      return;
-    }
-
-    if (!editedTransaction.date) {
-      showSnackbar("Please select a date.");
-      focusField(dateRef);
-      return;
-    }
-
-    if (error) {
-      showSnackbar(error.message);
-
-      if (error.type === "NO_ITEMS") {
-        focusField(addItemRef);
-        return;
-      }
-
-      if (error.type === "ITEM_NAME") {
-        itemRef.current[error.itemId]?.scrollIntoView();
-        itemRef.current[error.itemId]?.focus();
-        return;
-      }
-
-      if (error.type === "PAYMENT_AMOUNT") {
-        focusField(paymentRef);
-        return;
-      }
-
-      if (error.type === "UNIT_PRICE") {
-        unitPriceRef.current[
-          error.itemId
-        ]?.scrollIntoView();
-
-        unitPriceRef.current[
-          error.itemId
-        ]?.focus();
-
-        return;
-      }
-    }
-
-    const finalAmount =
-      editedTransaction.type === "PAYMENT"
-        ? Number(editedTransaction.amount)
-        : (editedTransaction.items ?? []).reduce(
-          (sum, item) =>
-            sum +
-            Number(item.quantity) *
-            Number(item.unitPrice),
-          0
-        );
-
-    const oldAmount =
-      Number(transaction.amount) || 0;
-
-    const sign =
-      transaction.type === "SALE"
-        ? 1
-        : -1;
-
-    const customerChanged =
-      customer.id !== editedTransaction.customerId;
-
-    if (customerChanged) {
-      const newCustomer = Customers.find(
-        (c) =>
-          c.id === editedTransaction.customerId
-      );
-
-      if (!newCustomer) {
-        showSnackbar(
-          "Selected customer not found; aborting balance update."
-        );
-
-        return;
-      }
-
-      const newBalanceOldC =
-        (customer.balance ?? 0) -
-        sign * oldAmount;
-
-      const newBalanceNewC =
-        (newCustomer.balance ?? 0) +
-        sign * finalAmount;
-
-      setCustomers((prev) =>
-        prev.map((c) => {
-          if (c.id === customer.id) {
-            return {
-              ...c,
-              balance: newBalanceOldC,
-            };
-          }
-
-          if (c.id === newCustomer.id) {
-            return {
-              ...c,
-              balance: newBalanceNewC,
-            };
-          }
-
-          return c;
-        })
-      );
-    } else if (finalAmount !== oldAmount) {
-      const delta =
-        finalAmount - oldAmount;
-
-      const newBalance =
-        (customer.balance ?? 0) +
-        sign * delta;
-
-      setCustomers((prev) =>
-        prev.map((c) =>
-          c.id === customer.id
-            ? {
-              ...c,
-              balance: newBalance,
-            }
-            : c
-        )
-      );
-    }
-
-    setTransactions((prev) =>
-      prev.map((t) =>
-        t.id === editedTransaction.id
-          ? {
-            ...editedTransaction,
-            amount: finalAmount,
-          }
-          : t
-      )
-    );
-
-    navigate(`/customers/${customer.id}`);
+  if (!editedTransaction.customerId) {
+    showSnackbar("Please select a customer.");
+    focusField(customerRef);
+    return;
   }
+
+  if (!editedTransaction.date) {
+    showSnackbar("Please select a date.");
+    focusField(dateRef);
+    return;
+  }
+
+  const error = hasTransactionValidationError(editedTransaction);
+  if (error) {
+    showSnackbar(error.message);
+    if (error.type === "NO_ITEMS") focusField(addItemRef);
+    if (error.type === "ITEM_NAME") {
+      itemRef.current[error.itemId]?.scrollIntoView();
+      itemRef.current[error.itemId]?.focus();
+    }
+    if (error.type === "PAYMENT_AMOUNT") focusField(paymentRef);
+    return;
+  }
+
+  const isPayment = editedTransaction.type === "PAYMENT";
+
+  if (isPayment) {
+    if (!editedTransaction.payment?.receivedBy.trim()) {
+      showSnackbar("Please enter who received the payment.");
+      return;
+    }
+  } else {
+    const wanted = new Map<string, number>();
+    for (const item of editedTransaction.items ?? []) {
+      if (!Number.isFinite(item.quantity) || item.quantity <= 0) {
+        showSnackbar("Enter a quantity greater than 0.");
+        return;
+      }
+      const key = item.productId ?? "";
+      wanted.set(key, (wanted.get(key) ?? 0) + item.quantity);
+    }
+
+    if (editedTransaction.type === "SALE") {
+      const original = transaction.items ?? [];
+      for (const [productId, qty] of wanted) {
+        const p = Products.find((x) => x.id === productId);
+        if (!p) continue;   // a removed product: the server decides
+        const back = original
+          .filter((i) => i.productId === productId)
+          .reduce((sum, i) => sum + i.quantity, 0);
+        if (qty > p.stock + back) {
+          showSnackbar(`Only ${p.stock + back} ${p.unit} of ${p.name} available.`);
+          return;
+        }
+      }
+    }
+  }
+
+  // The server rejects fields that don't belong to the type, so send only the right ones.
+  const body = isPayment
+    ? {
+        customerId: editedTransaction.customerId,
+        date: editedTransaction.date,
+        note: editedTransaction.note.trim(),
+        amount: Number(editedTransaction.amount),
+        payment: {
+          method: editedTransaction.payment?.method,
+          reference: editedTransaction.payment?.reference.trim() || "By Self",
+          receivedBy: editedTransaction.payment?.receivedBy.trim(),
+        },
+      }
+    : {
+        customerId: editedTransaction.customerId,
+        date: editedTransaction.date,
+        note: editedTransaction.note.trim(),
+        items: (editedTransaction.items ?? []).map((i) => ({
+          productId: i.productId,
+          quantity: Number(i.quantity),
+        })),
+        ...(editedTransaction.type === "RETURN"
+          ? { returnInfo: { reason: editedTransaction.return?.reason } }
+          : {}),
+      };
+
+  setIsSaving(true);
+  try {
+    await api.patch(`/transactions/${editedTransaction.id}`, body);
+    await refreshData();
+    // go to the customer the transaction belongs to now
+    navigate(`/customers/${editedTransaction.customerId}`);
+  } catch (err) {
+    showSnackbar(err instanceof ApiRequestError ? err.message : "Could not save the transaction");
+  } finally {
+    setIsSaving(false);
+  }
+}
 
   const typeStyles = {
     SALE: "bg-[#EBFBEF] text-[#16A34A]",
@@ -544,12 +447,12 @@ function EditTransactionForm({
             />
           ) : (
             <SaleReturnSection
-              transaction={editedTransaction}
-              handelSaleReturn={handelSaleReturn}
-              itemRef={itemRef}
-              unitPriceRef={unitPriceRef}
-              addItemRef={addItemRef}
-            />
+  transaction={editedTransaction}
+  handelSaleReturn={handelSaleReturn}
+  itemRef={itemRef}
+  addItemRef={addItemRef}
+  originalItems={transaction.items}
+/>
           )}
 
           <div>
@@ -584,11 +487,12 @@ function EditTransactionForm({
               Cancel
             </button>
 
-            <button
+            <button 
+            disabled={isSaving}
               type="submit"
-              className="bg-[#4F46E5] text-white font-medium text-sm px-5 py-2.5 rounded-xl shadow-[0_4px_14px_rgba(79,70,229,0.35)] hover:bg-[#4338CA] transition"
+              className="bg-[#4F46E5] text-white font-medium text-sm px-5 py-2.5 rounded-xl shadow-[0_4px_14px_rgba(79,70,229,0.35)] hover:bg-[#4338CA] transition disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Save Transaction
+             {isSaving ? "Saving..." : "Save Transaction"}
             </button>
           </div>
         </form>
@@ -607,10 +511,7 @@ function EditTransactionForm({
 function EditTransactions() {
   const { transactionId } = useParams();
 
-  const {
-    Transactions,
-    Customers,
-  } = useDataContext();
+  const { Transactions, Customers, isDataLoading } = useDataContext();
 
   const oldTransaction = Transactions.find(
     (t) =>
@@ -644,10 +545,13 @@ function EditTransactions() {
   }
 
   return (
+    <>{isDataLoading ? "Loading..." : "Transaction not found."}
     <EditTransactionForm
       transaction={oldTransaction}
       customer={customer}
     />
+    </>
+    
   );
 }
 

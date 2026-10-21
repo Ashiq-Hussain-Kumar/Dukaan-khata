@@ -1,4 +1,4 @@
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   BookOpen,
@@ -156,7 +156,7 @@ export default function Register() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Name */}
+            
             <div>
               <label
                 htmlFor="name"
@@ -184,7 +184,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Email */}
+           
             <div>
               <label
                 htmlFor="email"
@@ -212,7 +212,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Phone */}
+            
             <div>
               <label
                 htmlFor="phone"
@@ -240,7 +240,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Password */}
+            
             <div>
               <label
                 htmlFor="password"
@@ -281,7 +281,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Confirm password */}
+           
             <div>
               <label
                 htmlFor="confirmPassword"
@@ -329,7 +329,7 @@ export default function Register() {
               </div>
             </div>
 
-            {/* Submit */}
+            
             <button
               type="submit"
               disabled={loading}
