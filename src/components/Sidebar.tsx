@@ -125,9 +125,9 @@ const handleLogout = async () => {
     mt-auto flex w-full items-center gap-3
     rounded-xl border border-[#EDEEF2]
     px-4 py-3
-    text-sm font-medium text-black-600
+    text-sm font-medium text-[#111827] bg-white
     transition-all duration-200
-   bg-
+    
     hover:border-red-200 hover:bg-red-600 hover:text-white
     active:scale-[0.98]
     cursor-pointer

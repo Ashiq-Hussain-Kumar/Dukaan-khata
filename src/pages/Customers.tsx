@@ -9,7 +9,7 @@ import Snackbar from "../components/SnackBar";
 
 function Customers() {
 
-  const { Customers, refreshData } = useDataContext();
+const { Customers, refreshData, isDataLoading } = useDataContext();
 
   const cNameRef = useRef<HTMLInputElement|null>(null);
   const cPhoneRef = useRef<HTMLInputElement|null>(null);
@@ -219,8 +219,16 @@ async function handleAddCustomer(e:React.SubmitEvent<HTMLFormElement>) {
     ))}
 
     {filtered.length === 0 && (
-      <EmptyState text={`No customers match "${query}".`} />
-    )}
+  <EmptyState
+    text={
+      isDataLoading
+        ? "Loading..."
+        : Customers.length === 0
+          ? "No customers yet. Click Add Customer to start."
+          : `No customers match "${query}".`
+    }
+  />
+)}
   </div>
   <Snackbar message={error} onClose={() => setError("")} />
 </div>

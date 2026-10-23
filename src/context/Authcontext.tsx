@@ -4,6 +4,7 @@ import {
   useContext,
   useState,
   useEffect,
+  useCallback,
   type ReactNode,
 } from "react";
 
@@ -33,15 +34,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
-  const login = (userId: string) => {
-    setUser({ userId });
-    setIsAuthenticated(true);
-  };
+  const login = useCallback((userId: string) => {
+  setUser({ userId });
+  setIsAuthenticated(true);
+}, []);
 
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-  };
+const logout = useCallback(() => {
+  setUser(null);
+  setIsAuthenticated(false);
+}, []);
 
  useEffect(() => {
   const checkAuth = async () => {

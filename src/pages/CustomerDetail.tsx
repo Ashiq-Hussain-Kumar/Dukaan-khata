@@ -44,7 +44,7 @@ function Customer() {
     setEditedName(customer?.name ?? "");
     setEditedPhone(customer?.phone ?? "");
     setEditedAddress(customer?.address ?? "");
-  }, [customer?.id]);
+  },  [customer?.id, customer?.name, customer?.phone, customer?.address]);
   async function handleEditCustomer(e: React.SubmitEvent<HTMLFormElement>) {
     e.preventDefault();
     if (isBusy) return;

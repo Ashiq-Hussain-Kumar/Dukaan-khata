@@ -22,6 +22,7 @@ import { ProtectedRoute } from "./components/ProtectedRoutes";
 import { PublicRoute } from "./components/PublicRoutes";
 import VerifyEmail from "./pages/VerifyEmail";
 import ScrollToTop from "./components/ScrollToTop";
+import DataStatus from "./components/DataStatus";
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -63,39 +64,17 @@ function App() {
                     <Menu size={20} strokeWidth={2.2} />
                   </button>
                 </div>
-
+                 <DataStatus />
                 <Routes>
-                  <Route
-                    path="/dashboard"
-                    element={<ProtectedRoute><Dashboard /></ProtectedRoute> }
-                  />
-                  <Route
-                    path="/customers"
-                    element={<ProtectedRoute><Customers /> </ProtectedRoute> }
-                  />
-                  <Route
-                    path="/customers/:id"
-                    element={<ProtectedRoute><Customer /> </ProtectedRoute> }
-                  />
-                  <Route
-                    path="/EditTransaction/:transactionId"
-                    element={<ProtectedRoute><EditTransactions /></ProtectedRoute>}
-                  />
-                  <Route
-                    path="/customers/:id/NewTransaction/:type"
-                    element={<ProtectedRoute><NewTransaction /></ProtectedRoute>}
-                  />
-                  <Route
-                    path="/NewTransaction/:type"
-                    element={<ProtectedRoute><NewTransaction /></ProtectedRoute>}
-                  />
-                  <Route
-                    path="/ViewTransaction/:id"
-                    element={<ProtectedRoute><ViewTransaction /></ProtectedRoute>}
-                  />
-                  <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
-
-                  <Route path="/products" element={<ProtectedRoute><Products /></ProtectedRoute>} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+<Route path="/customers" element={<Customers />} />
+<Route path="/customers/:id" element={<Customer />} />
+<Route path="/products" element={<Products />} />
+<Route path="/EditTransaction/:transactionId" element={<EditTransactions />} />
+<Route path="/customers/:id/NewTransaction/:type" element={<NewTransaction />} />
+<Route path="/NewTransaction/:type" element={<NewTransaction />} />
+<Route path="/ViewTransaction/:id" element={<ViewTransaction />} />
+<Route path="/sales" element={<Sales />} />
                 </Routes>
               </main>
             </div> </ProtectedRoute>

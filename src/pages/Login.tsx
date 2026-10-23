@@ -10,7 +10,7 @@ import {
   LoaderCircle,
 } from "lucide-react";
 import { useAuthContext } from "../context/Authcontext";
-import { api } from "../utils/api";
+import { api, ApiRequestError } from "../utils/api";
 
 
 export default function Login():ReactNode {
@@ -22,6 +22,9 @@ export default function Login():ReactNode {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [needsVerification, setNeedsVerification] = useState(false);
+const [resending, setResending] = useState(false);
+const [resendMessage, setResendMessage] = useState("");
 
 
   if(isAuthenticated){
@@ -29,6 +32,19 @@ export default function Login():ReactNode {
      
     }
 
+     const handleResend = async () => {
+  if (resending) return;
+  setResending(true);
+  setResendMessage("");
+  try {
+    await api.post("/shopkeepers/resend-verification", { email: email.trim() }, { noRefresh: true });
+    setResendMessage("A new verification link has been sent. Check your email.");
+  } catch (err) {
+    setResendMessage(err instanceof Error ? err.message : "Could not send the email.");
+  } finally {
+    setResending(false);
+  }
+};
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
@@ -54,13 +70,12 @@ try {
 
   login(data.userId);
   navigate("/dashboard", { replace: true });
-} catch (err) {
-  setError(
-    err instanceof Error
-      ? err.message
-      : "Unable to connect to the server. Please try again."
-  );
-} finally {
+}catch (err) {
+  if (err instanceof ApiRequestError && err.status === 403) {
+    setNeedsVerification(true);
+  }
+  setError(err instanceof Error ? err.message : "Unable to connect to the server. Please try again.");
+}finally {
   setLoading(false);
 }
 
@@ -107,9 +122,22 @@ try {
               role="alert"
               className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
             >
-              {error}
+              {error}  
             </div>
           )}
+          {needsVerification && (
+  <div className="mb-5 text-sm">
+    <button
+      type="button"
+      onClick={handleResend}
+      disabled={resending}
+      className="font-semibold text-indigo-600 hover:text-indigo-700 disabled:opacity-60 cursor-pointer"
+    >
+      {resending ? "Sending..." : "Resend verification email"}
+    </button>
+    {resendMessage && <p className="mt-2 text-gray-600">{resendMessage}</p>}
+  </div>
+)}
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
@@ -136,6 +164,9 @@ try {
                   onChange={(e) => {
                     setEmail(e.target.value);
                     setError("");
+                    setError("");
+                    setNeedsVerification(false);
+                    setResendMessage("");
                   }}
                   className={inputClass}
                   required

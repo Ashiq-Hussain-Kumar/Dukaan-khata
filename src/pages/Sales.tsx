@@ -15,8 +15,7 @@ import { useMemo, useState } from "react";
 
 function Sales() {
 
-  const { Transactions, Customers } = useDataContext();
-
+const { Transactions, Customers, isDataLoading } = useDataContext();
 
   const [query, setQuery] = useState("");
   const [dateFilter, setDateFilter] = useState("all-time");
@@ -114,9 +113,15 @@ function Sales() {
       return { from, to };
     }
     else if (dateFilter === "custom") {
-  const from = new Date(customFrom);
-  const parsedTo = new Date(customTo);
-  const to = new Date(parsedTo.getFullYear(), parsedTo.getMonth(), parsedTo.getDate() + 1);
+  const from = customFrom ? new Date(customFrom) : null;
+
+  let to: Date | null = null;
+  if (customTo) {
+    const t = new Date(customTo);
+    // +1 day, so the "To" date itself is included
+    to = new Date(t.getFullYear(), t.getMonth(), t.getDate() + 1);
+  }
+
   return { from, to };
 }
   }
@@ -210,7 +215,7 @@ const averageSale =
 
         <StatCard
           label="No. of Sales"
-          value={String(filteredSales?.length) ?? 0}
+          value={String(filteredSales?.length)}
           icon={ShoppingBag}
           tone="green"
         />
@@ -495,7 +500,17 @@ const averageSale =
               </Link>
             );
           })}
-          {filteredSales.length === 0 && <EmptyState text="No sales match your filters." />}
+         {filteredSales.length === 0 && (
+  <EmptyState
+    text={
+      isDataLoading
+        ? "Loading..."
+        : !Transactions.some((t) => t.type === "SALE")
+          ? "No sales yet. Click Add Sale to start."
+          : "No sales match your filters."
+    }
+  />
+)}
         </div>
 
       </div>

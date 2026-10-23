@@ -1,6 +1,6 @@
 import React, { useState, createContext, useEffect, useContext, useCallback } from "react";
 import type { Customer, Product, Transaction } from "../types";
-import { api } from "../utils/api";
+import { api, ApiRequestError } from "../utils/api";
 import { useAuthContext } from "./Authcontext";
 import { toCustomer, toProduct,toTransaction, ApiCustomer,ApiProduct,  ApiTransaction } from "../utils/mapper";
 
@@ -18,14 +18,13 @@ interface DataContextType {
   isDataLoading: boolean;
   dataError: string;
   refreshData: () => Promise<void>;
-  setCustomers: React.Dispatch<React.SetStateAction<Customer[]>>;
-  setTransactions: React.Dispatch<React.SetStateAction<Transaction[]>>;
+  
 }
 
 const DataContext = createContext<DataContextType | null>(null);
 
 export function DataProvider({ children }: DataProviderType) {
-  const { isAuthenticated } = useAuthContext();
+  const { isAuthenticated,logout } = useAuthContext();
 
   const [Customers, setCustomers] = useState<Customer[]>([]);
   const [Products, setProducts] = useState<Product[]>([]);
@@ -51,12 +50,16 @@ export function DataProvider({ children }: DataProviderType) {
       // The backend sends newest first, but your pages assume oldest first
       // (Dashboard does reverse().slice(0, 6)). We fix the pages later (step 13).
       setTransactions(transactionsRes.transactions.map(toTransaction).reverse());
-    } catch (error) {
-      setDataError(error instanceof Error ? error.message : "Could not load data");
-    } finally {
+    }  catch (error) {
+  if (error instanceof ApiRequestError && error.status === 401) {
+    logout();   // the route guard sends the user to /login
+    return;
+  }
+  setDataError(error instanceof Error ? error.message : "Could not load data");
+}finally {
       setIsDataLoading(false);
     }
-  }, []);
+  }, [logout]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -79,7 +82,7 @@ export function DataProvider({ children }: DataProviderType) {
         Transactions, Customers, Products,
         totalSales, totalCollected, totalBalance,
         isDataLoading, dataError, refreshData,
-        setCustomers, setTransactions,
+        
       }}
     >
       {children}

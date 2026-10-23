@@ -1,19 +1,25 @@
 import type { Transaction } from "../types";
 
 interface WithRunningBalance extends Transaction {
-  runningBalance: number; 
+  runningBalance: number;
 }
 
+export function getRunningBalances(customerTransactions: Transaction[]): WithRunningBalance[] {
+  
+  const sorted = [...customerTransactions].sort((a, b) =>
+    a.date < b.date ? -1 : a.date > b.date ? 1 : 0
+  );
 
-export function getRunningBalances(customerTransactions:Transaction[]):WithRunningBalance[]{
-  const sorted = [...customerTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-  return sorted.map((t, index) => {
-    const upToHere = sorted.slice(0, index + 1);
-    const balance = upToHere.reduce((sum, tr) => {
-      if (tr.type === "SALE") return sum + tr.amount;
-      if (tr.type === "PAYMENT" || tr.type === "RETURN") return sum - tr.amount;
-      return sum;
-    }, 0);
+  let balance = 0;
+
+  return sorted.map((t) => {
+    if (t.type === "SALE") {
+      balance += t.amount;
+    } else {
+      balance -= t.amount; // PAYMENT and RETURN
+    }
+    balance = Math.round(balance * 100) / 100;
+
     return { ...t, runningBalance: balance };
   });
 }
