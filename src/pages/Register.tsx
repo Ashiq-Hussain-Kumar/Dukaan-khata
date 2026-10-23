@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   BookOpen,
@@ -32,11 +32,18 @@ export default function Register() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
+  const redirectTimer = useRef<number | null>(null);
+  useEffect(() => {
+  return () => {
+    if (redirectTimer.current !== null) clearTimeout(redirectTimer.current);
+  };
+}, []);
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm({ ...form, [e.target.name]: e.target.value });
     setError("");
     setSuccess("");
   };
+
 
   const handleSubmit = async (e: React.SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -67,7 +74,7 @@ export default function Register() {
     setLoading(true);
 
     try {
-     await api.post(
+   const data = await api.post<{ emailVerificationRequired: boolean }>(
   "/shopkeepers/register",
   {
     name: form.name.trim(),
@@ -86,9 +93,13 @@ export default function Register() {
     password: "",
     confirmPassword: "",
   });
-      setTimeout(() => {
-        navigate("/login");
-      }, 10000);
+     if (data.emailVerificationRequired) {
+  setSuccess("Account created. Check your email for a verification link, then log in.");
+  
+} else {
+  setSuccess("Account created. Taking you to the login page...");
+  redirectTimer.current = window.setTimeout(() => navigate("/login"), 3000);
+}
     } catch (err) {
       setError(
         err instanceof Error
@@ -106,7 +117,7 @@ export default function Register() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#F7F8FB] px-4 py-10">
       <div className="w-full max-w-md">
-        {/* Brand */}
+        
         <Link
           to="/register"
           className="mb-8 flex items-center justify-center gap-3"
@@ -151,7 +162,7 @@ export default function Register() {
               className="mb-5 flex items-start gap-2 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-700"
             >
               <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
-              {success}
+              {success} <Link to="/login" className="font-semibold underline">Go to login</Link>
             </div>
           )}
 
@@ -332,7 +343,7 @@ export default function Register() {
             
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || success !== ""}
               className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? (

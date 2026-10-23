@@ -124,7 +124,7 @@ async function handleAddCustomer(e:React.SubmitEvent<HTMLFormElement>) {
       </button>
     </div>
 
-    {/* Add Customer form */}
+    
     {showForm && (
       <form
         onSubmit={handleAddCustomer}
@@ -172,7 +172,7 @@ async function handleAddCustomer(e:React.SubmitEvent<HTMLFormElement>) {
       </form>
     )}
 
-    {/* Search bar */}
+    
     <div className="relative">
       <Search
         size={16}

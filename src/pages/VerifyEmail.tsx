@@ -14,7 +14,7 @@ export default function VerifyEmail() {
   );
  console.log(message);
  
-  // Prevent duplicate verification requests in development Strict Mode.
+ 
   const requestStarted = useRef(false);
 
   useEffect(() => {
@@ -127,7 +127,7 @@ export default function VerifyEmail() {
           )}
         </div>
 
-        {/* Heading */}
+       
         <p className="mb-3 text-xs font-semibold uppercase tracking-[0.25em] text-indigo-300">
           Shopkeeper Account
         </p>
@@ -148,7 +148,7 @@ export default function VerifyEmail() {
             : message}
         </p>
 
-        {/* Status badge */}
+        
         <div className="mb-8">
           <span
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-medium ${
@@ -176,7 +176,7 @@ export default function VerifyEmail() {
           </span>
         </div>
 
-        {/* Action buttons */}
+        
         {isSuccess && (
           <Link
             to="/login"
