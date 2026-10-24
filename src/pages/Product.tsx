@@ -288,7 +288,7 @@ function Products() {
         )}
       </div>
 
-      <Snackbar message={error} onClose={() => setError("")} />
+      <Snackbar message={error} type="error" onClose={() => setError("")} />
     </div>
   );
 }

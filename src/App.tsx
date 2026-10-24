@@ -23,6 +23,8 @@ import { PublicRoute } from "./components/PublicRoutes";
 import VerifyEmail from "./pages/VerifyEmail";
 import ScrollToTop from "./components/ScrollToTop";
 import DataStatus from "./components/DataStatus";
+import Settings from "./pages/Settings";
+
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -75,6 +77,7 @@ function App() {
 <Route path="/NewTransaction/:type" element={<NewTransaction />} />
 <Route path="/ViewTransaction/:id" element={<ViewTransaction />} />
 <Route path="/sales" element={<Sales />} />
+<Route path="/settings" element={<Settings/>}/>
                 </Routes>
               </main>
             </div> </ProtectedRoute>

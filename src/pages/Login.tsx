@@ -58,7 +58,11 @@ const [resendMessage, setResendMessage] = useState("");
 
    
 try {
-  const data = await api.post<{ userId: string }>(
+  const data = await api.post<{
+    userId: string;
+    userName: string;
+    userDetails?: Record<string, unknown> | null;
+  }>(
     "/shopkeepers/login",
     { email: email.trim(), password },
     { noRefresh: true }
@@ -68,9 +72,9 @@ try {
     throw new Error("Login succeeded, but the user information is missing.");
   }
 
-  login(data.userId);
+  login(data.userId, data.userName, data.userDetails ?? null);
   navigate("/dashboard", { replace: true });
-}catch (err) {
+} catch (err) {
   if (err instanceof ApiRequestError && err.status === 403) {
     setNeedsVerification(true);
   }

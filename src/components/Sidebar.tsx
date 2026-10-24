@@ -1,4 +1,4 @@
-import { Wallet, LayoutDashboard, Users, X, Weight, LogOut, Package } from "lucide-react";
+import { Wallet, LayoutDashboard, Users, X, Weight, LogOut, Package, Settings} from "lucide-react";
 import NavItem from "./sidebar-components/Navitem";
 import { Dispatch, SetStateAction } from "react";
 import { useAuthContext } from "../context/Authcontext";
@@ -14,31 +14,37 @@ type SidebarProps={
 
 function Sidebar({ isSidebarOpen, setIsSidebarOpen }:SidebarProps) {
   const nav = [
-    {
-      key: "dashboard",
-      label: "Dashboard",
-      path: "/dashboard",
-      icon: LayoutDashboard,
-    },
-    {
-      key: "customers",
-      label: "Customers",
-      path: "/customers",
-      icon: Users,
-    },
-    {
-      key: "sales",
-      label: "Sales",
-      path: "/sales",
-      icon: Weight,
-    },
-    {
-  key: "products",
-  label: "Products",
-  path: "/products",
-  icon: Package,
-},
-  ];
+  {
+    key: "dashboard",
+    label: "Dashboard",
+    path: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    key: "customers",
+    label: "Customers",
+    path: "/customers",
+    icon: Users,
+  },
+  {
+    key: "sales",
+    label: "Sales",
+    path: "/sales",
+    icon: Weight,
+  },
+  {
+    key: "products",
+    label: "Products",
+    path: "/products",
+    icon: Package,
+  },
+  {
+    key: "settings",
+    label: "Settings",
+    path: "/settings",
+    icon: Settings,
+  },
+];
 
   const navigate = useNavigate();
 const { logout } = useAuthContext();

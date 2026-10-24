@@ -416,7 +416,7 @@ function Customer() {
 
         {CustomerHistory.length === 0 && <EmptyState text="No transactions yet for this customer." />}
       </div>
-      <Snackbar message={error} onClose={() => setError("")} />
+      <Snackbar message={error} type="error" onClose={() => setError("")} />
     </div>
   );
 }

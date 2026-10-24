@@ -230,7 +230,7 @@ async function handleAddCustomer(e:React.SubmitEvent<HTMLFormElement>) {
   />
 )}
   </div>
-  <Snackbar message={error} onClose={() => setError("")} />
+  <Snackbar message={error} type="error" onClose={() => setError("")} />
 </div>
 
 

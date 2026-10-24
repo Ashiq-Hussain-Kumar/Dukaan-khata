@@ -5,8 +5,10 @@ import { ReceiptIndianRupee, TrendingDown, TrendingUp } from "lucide-react";
 import currency from "../utils/Currency";
 import EmptyState from "../components/Emptystate"
 import { useDataContext } from "../context/DataContext";
+import { useAuthContext } from "../context/Authcontext";
 
 function Dashboard() {
+  const {userName} = useAuthContext();
   const { Transactions, Customers, totalSales, totalCollected, totalBalance, isDataLoading } = useDataContext();
   const recentTransaction = [...Transactions].reverse().slice(0, 6);
 
@@ -14,7 +16,7 @@ function Dashboard() {
 
   return (<>
     <div>
-      <h2 className="font-semibold text-[#111827] text-2xl tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Dashboard</h2>
+      <h2 className="font-semibold text-[#111827] text-2xl tracking-tight" style={{ fontFamily: "'Space Grotesk', sans-serif" }}>Welcome back, {userName?.userName}</h2>
       <p className="text-sm text-[#576379] mb-8">A quick look at how the shop is doing today</p>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
