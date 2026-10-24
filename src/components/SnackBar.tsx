@@ -5,11 +5,11 @@ export type SnackbarType = "success" | "error";
 
 interface SnackbarProps {
   message: string;
-  type: SnackbarType;
+  type?: "success" | "error";
   onClose: () => void;
 }
 
-function SnackBar({ message, type, onClose }: SnackbarProps) {
+function SnackBar({ message, type ="error", onClose }: SnackbarProps) {
   useEffect(() => {
     if (!message) return;
 
