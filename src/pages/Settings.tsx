@@ -226,7 +226,7 @@ if (phoneDigits.length !== 10) {
 
     try {
       // Make sure this endpoint and payload match your backend.
-      await api.patch("/shopkeepers/change-password", {
+      await api.post("/shopkeepers/change-password", {
         currentPassword,
         newPassword,
       });
